@@ -25,6 +25,7 @@ public class TemporaryControl {
 	private static final double numberOfReaders = 100; //lambda = .005
 	private static final double newArticles = 20;
 	private static double[] exponent = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+	private static String MESSAGGE = "just for test";
 	
 	private static ArrayList<double[]> rsensitivity() {	
 		ArrayList<double[]> probs = new ArrayList<double[]>();
