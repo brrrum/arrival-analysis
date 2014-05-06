@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.UUID;
 
@@ -38,6 +39,7 @@ public class ArrivalProcess implements CProjectVariables{
 	private double arrivalRate;
 	private String id10, id11;
 	private static String resultsPath = "C:/academic/recommender system 2/Management Science/review/simulation-Results/";
+	//C:/Users/sprawesh/git/arrival-analysis/recommender.management.science/
 	private static int INITIAL_COUNTS = 1000;	
 	private static double POWER_EXPONENT = 1.4;
 	private double[] threshold;
@@ -246,7 +248,7 @@ public class ArrivalProcess implements CProjectVariables{
 			sample1 = bsu.getHashMaps(bsu.convertList(allArticles));
 			double accLoss = bsu.accuracyLoss(mpa, pmpa);
 			cl = upr.getNewClicks();			
-			double distortion = distortionMeasure(sample1, initialIds, true);
+			double distortion = distortionMeasure(sample1, initialIds, false);
 			accLosses.add(accLoss);
 			//updating M1, FROM HERE update M1 for probablistic.
 			m1Plot(id10, id11, it);	
@@ -314,10 +316,10 @@ public class ArrivalProcess implements CProjectVariables{
 		double[] initialc = new double[sample1.size()];
 		double[] updated = new double[sample1.size()];
 		
-		Iterator it = sample1.entrySet().iterator();
+		Iterator<Entry<String, Double[]>> it = sample1.entrySet().iterator();
 		int i = 0;
 		while(it.hasNext()) {			
-			String key = (String) it.next();
+			String key = it.next().getKey(); 			
 			boolean initial  = false;
 			for(String id : ids) {
 				if(id.equalsIgnoreCase(key)) {
@@ -328,7 +330,7 @@ public class ArrivalProcess implements CProjectVariables{
 			
 			if(initial) {
 				initialc[i] = sample1.get(key)[0];
-				updated[i] = sample1.get(key)[1];				
+				updated[i] = sample1.get(key)[1];	System.out.println("tracking : " + sample1.get(key)[0] + ", " + sample1.get(key)[1]);	 		
 			} else {
 				initialc[i] = (double) 0;
 				updated[i] = sample1.get(key)[1]; 
@@ -373,7 +375,7 @@ public class ArrivalProcess implements CProjectVariables{
 		return sum/n; 
 	}
 	
-	public ArrayList<ArrayList<Double>> getPentropies() {
+	public ArrayList<ArrayList<Double>> getJSDistortion() {
 		return JSdistortion;
 	}	
 

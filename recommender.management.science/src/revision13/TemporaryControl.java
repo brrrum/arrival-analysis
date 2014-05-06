@@ -24,12 +24,11 @@ public class TemporaryControl {
 	
 	private static final double numberOfReaders = 100; //lambda = .005
 	private static final double newArticles = 20;
-	private static double[] exponent = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-	private static String MESSAGGE = "just for test";
+	private static double[] exponent = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };	
 	
 	private static ArrayList<double[]> rsensitivity() {	
 		ArrayList<double[]> probs = new ArrayList<double[]>();
-		double[] prob1  = { 0.3, 0.4, 0.3 };// most popular, breaking news,  5 articles on the front page
+		double[] prob1  = { 0.3, 0.4, 0.3 };// most popular, breaking news,  5 articles on the front page for each category
 		double[] prob2  = { 0.3, 0.5, 0.2 };
 		double[] prob3  = { 0.4, 0.3, 0.3 };
 		double[] prob4  = { 0.4, 0.4, 0.2 };		
@@ -60,7 +59,7 @@ public class TemporaryControl {
 			ArrayList<ArrayList<Double>> acclosses = new ArrayList<ArrayList<Double>>();
 			double lambda = 0.002;			
 			
-			for(int i = 1; i <= 4; i++) {
+			for(int i = 1; i <= 3; i++) {
 				Generator gr = new Generator();
 				gr.setSeed(764545);	gr.setSeed(gr.refreshRNG());
 				
@@ -76,16 +75,16 @@ public class TemporaryControl {
 				arrivals.updateArticles(countSort, exponent[0]); 
 				
 				if( i == 1) {
-					ArrayList<ArrayList<Double>> hard = arrivals.getHSimulationPoints();
+					ArrayList<ArrayList<Double>> hard = arrivals.getHSimulationPoints(); /// arraylist with iteration and m1 value.
 					ArrayList<ArrayList<Double>> m2hard = arrivals.gethm2Plot();
 					repdatapoints.add(hard); m2datapoints.add(m2hard);
-					rentropies.add(arrivals.getPentropies()); //this is for hard cutoff
+					rentropies.add(arrivals.getJSDistortion()); //this is for hard cutoff
 				}
 				
 				ArrayList<ArrayList<Double>> prob = arrivals.getPSimulationPoints();				
 				ArrayList<ArrayList<Double>> m2prob = arrivals.getpm2Plot();
 				repdatapoints.add(prob); m2datapoints.add(m2prob);
-				rentropies.add(arrivals.getPentropies());
+				rentropies.add(arrivals.getJSDistortion()); 
 				
 				double loss = arrivals.getAverageAccuracyLoss();
 				losses.add((double) i); losses.add(loss);
@@ -94,7 +93,7 @@ public class TemporaryControl {
 			}
 			writeFile(repdatapoints, "M1" + "-" + i + ".csv");
 			writeFile(m2datapoints, "M2" + "-" + i + ".csv");
-			writeFile(rentropies, "entropyChange" + "-" + i + ".csv");
+			writeFile(rentropies, "JSDistortion" + "-" + i + ".csv");
 			writeMetric(acclosses, "Metrics" + "-" + i + ".csv");
 		}	
 		
