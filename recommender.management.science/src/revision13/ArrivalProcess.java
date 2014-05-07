@@ -66,7 +66,6 @@ public class ArrivalProcess implements CProjectVariables{
 	private Random rand = new Random(7000); 	
 	private int newClicks = 0;
 	private int rpclicks; private int hnclicks;
-	private int cl;
 	HashMap<String, Double[]> sample1 = null;
 	
 	/**
@@ -190,7 +189,7 @@ public class ArrivalProcess implements CProjectVariables{
    
 	public void updateArticles(List<DynamicArticleProperties> countSort, double exp) {
 		List<Integer> arrivals = arrivalofArticles();
-		for(int it = 0; it < sampleSize; it++) {	// FROM HERE		
+		for(int it = 0; it < sampleSize; it++) {			
 			int val = arrivals.get(it);
 			
 			if(!(val == 0)) {
@@ -235,19 +234,18 @@ public class ArrivalProcess implements CProjectVariables{
 			
 			bsu.sortCont(countSort); // IMPLEMENT PROBABILISTIC
 			mpa = bsu.mostPopular(countSort, bsu.convertList(allArticles), false); // we need only 10 articles to be displayed			
-			System.out.println("most popular : " + bsu.writeValue(mpa, true)); 
+			//System.out.println("most popular : " + bsu.writeValue(mpa, true)); 
 			int tempseed = refreshRNG();
 			//pmpa = new MethodT().pMostPopular(countSort, bsu.convertList(allArticles), exp);
 			pmpa = bsu.pMostPopular(tempseed, countSort, bsu.convertList(allArticles), exp);
-			System.out.println("post popular : " + bsu.writeValue(pmpa, true)); 
+			//System.out.println("prob popular : " + bsu.writeValue(pmpa, true)); 
 			//List<DynamicArticleProperties> copy = bsu.convertList(allArticles); //bsu.sortCont(copy);	 
 			upr = new UpdateReader(refreshRNG());
 			
 			//System.out.println("clicks : " + cl +" psum : " + bsu.printPSum(bsu.convertList(allArticles)) + "sum : " + bsu.printSum(bsu.convertList(allArticles))); 
 			upr.frontPageSelection(threshold, mpa, fda, ltempcat, allArticles, pmpa);
 			sample1 = bsu.getHashMaps(bsu.convertList(allArticles));
-			double accLoss = bsu.accuracyLoss(mpa, pmpa);
-			cl = upr.getNewClicks();			
+			double accLoss = bsu.accuracyLoss(mpa, pmpa);			
 			double distortion = distortionMeasure(sample1, initialIds, false);
 			accLosses.add(accLoss);
 			//updating M1, FROM HERE update M1 for probablistic.
@@ -330,7 +328,7 @@ public class ArrivalProcess implements CProjectVariables{
 			
 			if(initial) {
 				initialc[i] = sample1.get(key)[0];
-				updated[i] = sample1.get(key)[1];	System.out.println("tracking : " + sample1.get(key)[0] + ", " + sample1.get(key)[1]);	 		
+				updated[i] = sample1.get(key)[1];	//System.out.println("tracking : " + sample1.get(key)[0] + ", " + sample1.get(key)[1]);	 		
 			} else {
 				initialc[i] = (double) 0;
 				updated[i] = sample1.get(key)[1]; 
@@ -365,7 +363,7 @@ public class ArrivalProcess implements CProjectVariables{
 		return hm2Points;
 	}
 	
-	public double getAverageAccuracyLoss() {
+	public double getAverageAccuracyLoss() { //at the end of simulation
 		double sum = 0;
 		double n = accLosses.size();
 		for(int i = 0; i < n; i++) {
@@ -377,6 +375,16 @@ public class ArrivalProcess implements CProjectVariables{
 	
 	public ArrayList<ArrayList<Double>> getJSDistortion() {
 		return JSdistortion;
-	}	
+	}
+	
+	public double getAverageJSD() {
+		double sum = 0;
+		double n = JSdistortion.size();
+		for(int i = 0; i < n ; i++) {
+			sum += JSdistortion.get(i).get(1);
+		}
+		
+		return sum/n;
+	}
 
 }

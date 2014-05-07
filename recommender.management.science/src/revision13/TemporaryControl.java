@@ -57,22 +57,22 @@ public class TemporaryControl {
 			ArrayList<ArrayList<ArrayList<Double>>> m2datapoints = new ArrayList<ArrayList<ArrayList<Double>>>();
 			ArrayList<ArrayList<ArrayList<Double>>> rentropies = new ArrayList<ArrayList<ArrayList<Double>>>();
 			ArrayList<ArrayList<Double>> acclosses = new ArrayList<ArrayList<Double>>();
+			ArrayList<Double> jsds = new ArrayList<Double>();
 			double lambda = 0.002;			
 			
-			for(int i = 1; i <= 3; i++) {
+			for(int i = 1; i <= 10; i++) {
 				Generator gr = new Generator();
 				gr.setSeed(764545);	gr.setSeed(gr.refreshRNG());
 				
 				List<DynamicArticleProperties> articleList = new LinkedList<DynamicArticleProperties>();
 				List<DynamicArticleProperties> initialTimeSort = new LinkedList<DynamicArticleProperties>();
 				List<DynamicArticleProperties> countSort = new ArrayList<DynamicArticleProperties>();
-				ArrayList<Double> losses = new ArrayList<Double>();
-				
+				ArrayList<Double> losses = new ArrayList<Double>();				
 				//ArrivalProcess arrivals = new ArrivalProcess((int) numberOfReaders, lambda, prob);
 				
 				ArrivalProcess arrivals = new ArrivalProcess(gr, (int) numberOfReaders, lambda, prob);	
 				arrivals.seedArticles(articleList,  initialTimeSort, countSort);
-				arrivals.updateArticles(countSort, exponent[0]); 
+				arrivals.updateArticles(countSort, exponent[i-1]); 
 				
 				if( i == 1) {
 					ArrayList<ArrayList<Double>> hard = arrivals.getHSimulationPoints(); /// arraylist with iteration and m1 value.
@@ -89,32 +89,48 @@ public class TemporaryControl {
 				double loss = arrivals.getAverageAccuracyLoss();
 				losses.add((double) i); losses.add(loss);
 				acclosses.add(losses);
+				
+				double distortion = arrivals.getAverageJSD();
+				jsds.add(distortion);
 				System.out.println("-----------new exponent " + i + "----------"); 
 			}
 			writeFile(repdatapoints, "M1" + "-" + i + ".csv");
 			writeFile(m2datapoints, "M2" + "-" + i + ".csv");
 			writeFile(rentropies, "JSDistortion" + "-" + i + ".csv");
-			writeMetric(acclosses, "Metrics" + "-" + i + ".csv");
+			writeMetric(acclosses, jsds, "Metrics" + "-" + i + ".csv");
 		}	
 		
 	}
 	
-	private static void writeMetric(ArrayList<ArrayList<Double>> acclosses,
-			String path) {
+	private static void writeMetric(ArrayList<ArrayList<Double>> acclosses, ArrayList<Double> jsds,
+			String path) {		
+		
 		try {
 			BufferedWriter bw  = new BufferedWriter(new FileWriter(path));			
-			bw.write("exponent" + "," + "accuracyLoss"+",");
+			bw.write("exponent" + "," + "b0"+"," + "b0.1"+"," + "b0.2"+"," + "b0.3"+"," + "b0.4"+"," + "b0.5"+"," + "b0.6"+"," + "b0.7"+"," + "b0.8" + "," + "b0.9"+"," + "b1"+","); 
 			bw.newLine();
+			
 			for(int i = 0; i < acclosses.size(); i++) {
-				bw.write(acclosses.get(i).get(0) + "," + acclosses.get(i).get(1));
+				double exponent = acclosses.get(i).get(0);
+				double accloss = acclosses.get(i).get(1);
+				double jsd = jsds.get(i);
+				
+				StringBuilder sb = new StringBuilder();
+				for(int j = 0; j <= 10; j++) {
+					double beta = (double)j/(double)10;
+					double metric = (beta)*accloss + (1-beta)*jsd;
+					sb.append(metric + ","); 
+				}
+				
+				bw.write(exponent + "," + sb); 
 				bw.newLine();
-			}			
+			}
 			
 			bw.flush(); bw.close();
-		} catch (IOException e) {
 			
+		} catch (IOException e) {			
 			e.printStackTrace();
-		}
+		}		
 		
 	}
 	
