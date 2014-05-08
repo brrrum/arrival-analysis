@@ -14,7 +14,7 @@ import umontreal.iro.lecuyer.probdist.InverseGaussianDist;
 
 public class UpdateReader {
 	
-	private static InverseGaussianDist inv = new InverseGaussianDist(4, 3); // mu = (3,8) and lambda = (2,6.2)
+	private static InverseGaussianDist inv = new InverseGaussianDist(2.16, 3); // mu = (3,8) and lambda = (2,6.2)
 	private int seed;
 	Random rand;
 	private BasicUtilities bsu = new BasicUtilities();
@@ -25,17 +25,17 @@ public class UpdateReader {
 	}
 	
 	// write method for reader behavior. it involves selection from breaking news, front page categorized and most popular articles.
-	// number of articles according to inverse guassian distribution, readers are also allowed to navigate through different sections.
+	// number of articles are selected according to inverse guassian distribution, readers are also allowed to navigate through different sections.
 	public void frontPageSelection(double[] fth, ArrayList<DynamicArticleProperties> mpa, LinkedList<DynamicArticleProperties> fda, 
 			LinkedList<DynamicArticleProperties> ltempcat, ArrayList<LinkedList<DynamicArticleProperties>> allArticles, 
 			ArrayList<DynamicArticleProperties> pmpa) {
 		//ltempcat, all list of articles fda, front page list, mpa, most popular 
 		rand = new Random(seed);		
 		narticles = (int) Math.floor(inv.inverseF(rand.nextDouble())+1);
-		if( narticles > 25) {
-			narticles = 25;
+		if( narticles > 15) {
+			narticles = 15;
 		}
-		// first article from front page or most populat list.
+		// first article from front page or most popular list.
 		// generate probability.		
 		for (int i = 0; i < narticles; i++) {
 			double sp = rand.nextDouble(); 			
