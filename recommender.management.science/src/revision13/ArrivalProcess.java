@@ -112,7 +112,7 @@ public class ArrivalProcess implements CProjectVariables{
 			List<DynamicArticleProperties> countSort) {		
 		List<String> categories = BasicUtilities.getCategories();
 		
-		// total seed articles 60 + 8*25 = 100; additional 200 articles arrive
+		// total seed articles 8*50 = 400, among them 20+40+10 are displayed on frontPage; additional 200 articles arrive
 		for(int k = 0; k < 400; k++) {
 			gr.setSeed(gr.refreshRNG());
 			ZipfDistribution zpf = new ZipfDistribution(gr, INITIAL_COUNTS, POWER_EXPONENT);
@@ -136,7 +136,7 @@ public class ArrivalProcess implements CProjectVariables{
 			String category = categories.get(i);
 			update += j;			
 			List<DynamicArticleProperties> categoryIdn= new ArrayList<DynamicArticleProperties>();			
-			for(j=0;j<icategoryCount;j++){				
+			for(j=0;j<icategoryCount;j++){	//50 articles in each category			
 				articleList.get(update+j).setCategory(category);				
 				categoryIdn.add(articleList.get(update+j));				
 				initialTimeSort.add(articleList.get(update+j));
@@ -182,7 +182,7 @@ public class ArrivalProcess implements CProjectVariables{
 		datapoint.add((double) 0); pdatapoint.add((double) 0); 
 		datapoint.add((Math.log((double)ten.getCurrentClicks()/(double)ele.getCurrentClicks()))); 
 		datapoints.add(datapoint); pdatapoint.add((Math.log((double)ten.getPcurrentClicks()/(double)ele.getPcurrentClicks()))); 
-		
+		// pdatapoints appears to be updated.
 		bsu.matchingUpdate(allArticles, articleList);
 		// get allArticles according to articleList, METHOD matchingUpdate.
 		//bsu.printResult(allArticles);	UNCOMMENT TO GET UPDATE		
@@ -330,7 +330,7 @@ public class ArrivalProcess implements CProjectVariables{
 			
 			if(initial) {
 				initialc[i] = sample1.get(key)[0];
-				updated[i] = sample1.get(key)[1];	System.out.println("tracking : " + sample1.get(key)[0] + ", " + sample1.get(key)[1]);	 		
+				updated[i] = sample1.get(key)[1];	//System.out.println("tracking : " + sample1.get(key)[0] + ", " + sample1.get(key)[1]);	 		
 			} else {
 				initialc[i] = (double) 0;
 				updated[i] = sample1.get(key)[1]; 
