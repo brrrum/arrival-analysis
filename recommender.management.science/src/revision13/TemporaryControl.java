@@ -22,7 +22,7 @@ import arrivalUtilities.TrajectoryPlots;
 
 public class TemporaryControl {
 	
-	private static final double numberOfReaders = 100; //lambda = .005
+	private static final double numberOfReaders = 10000; //lambda = .005
 	private static final double newArticles = 20;
 	private static double[] exponent = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };	
 	
@@ -58,6 +58,7 @@ public class TemporaryControl {
 			ArrayList<ArrayList<ArrayList<Double>>> rentropies = new ArrayList<ArrayList<ArrayList<Double>>>();
 			ArrayList<ArrayList<Double>> acclosses = new ArrayList<ArrayList<Double>>();
 			ArrayList<Double> jsds = new ArrayList<Double>();
+			ArrayList<Double> hvalues = new ArrayList<Double>();
 			double lambda = 0.002;			
 			
 			for(int i = 1; i <= 10; i++) {
@@ -78,7 +79,7 @@ public class TemporaryControl {
 					ArrayList<ArrayList<Double>> hard = arrivals.getHSimulationPoints(); /// arraylist with iteration and m1 value.
 					ArrayList<ArrayList<Double>> m2hard = arrivals.gethm2Plot();
 					repdatapoints.add(hard); m2datapoints.add(m2hard);
-					rentropies.add(arrivals.getJSDistortion()); //this is for hard cutoff
+					writesingColumn(arrivals.getJHSDistortion()); //we can skip distortion for hardcutoff
 				}
 				
 				ArrayList<ArrayList<Double>> prob = arrivals.getPSimulationPoints();				
@@ -195,13 +196,35 @@ public class TemporaryControl {
 		//arrivals.previousReadModel(10, .8);		
 	}
 	
+	private static void writesingColumn(ArrayList<Double> data) {
+		try {
+			BufferedWriter bw  = new BufferedWriter(new FileWriter("hardDistortion.csv"));
+			for(int i = 0; i < data.size(); i++) {
+				bw.write(Double.toString(data.get(i)));	
+				bw.newLine();
+			}
+			bw.flush(); bw.close();
+		} catch (IOException e) {			
+			e.printStackTrace();
+		}
+		
+	}
+	
 	private static void writeFile(ArrayList<ArrayList<ArrayList<Double>>> repdatapoints, String path) {
 		try {
 			BufferedWriter bw  = new BufferedWriter(new FileWriter(path));
-			bw.write("iteration" + "," + "hard"+",");
-			for(int i = 1; i < repdatapoints.size(); i++) {
-				bw.write("exp"+ i + ","); 
-			}			
+			if(path.contains("JSD")) {
+				bw.write("iteration" + "," );
+				for(int i = 1; i <= repdatapoints.size(); i++) {
+					bw.write("exp"+ i + ","); 
+				}
+			}
+			else {
+				bw.write("iteration" + "," + "hard"+",");
+				for(int i = 1; i < repdatapoints.size(); i++) {
+					bw.write("exp"+ i + ","); 
+				}
+			}						
 			bw.newLine();
 			
 			for(int i = 0; i < repdatapoints.get(0).size()-1; i++) {

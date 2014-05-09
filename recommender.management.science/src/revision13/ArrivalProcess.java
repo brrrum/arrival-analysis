@@ -1,5 +1,7 @@
 package revision13;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -19,6 +21,7 @@ import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.apache.commons.math3.exception.NotStrictlyPositiveException;
 import org.apache.commons.math3.random.RandomGenerator;
+import org.apache.commons.math3.stat.StatUtils;
 
 import arrivalUtilities.BasicUtilities;
 import cc.mallet.util.Maths;
@@ -46,6 +49,7 @@ public class ArrivalProcess implements CProjectVariables{
 	private ArrayList<LinkedList<DynamicArticleProperties>> allArticles= new ArrayList<LinkedList<DynamicArticleProperties>>();
 	ArrayList<ArrayList<Double>> datapoints = new ArrayList<ArrayList<Double>>();
 	ArrayList<ArrayList<Double>> JSdistortion = new ArrayList<ArrayList<Double>>();	
+	ArrayList<Double> JSHdistortion = new ArrayList<Double>();
 	ArrayList<ArrayList<Double>> pm2Points = new ArrayList<ArrayList<Double>>();
 	ArrayList<ArrayList<Double>> hm2Points = new ArrayList<ArrayList<Double>>();
 	ArrayList<ArrayList<Double>> pdatapoints = new ArrayList<ArrayList<Double>>();
@@ -67,7 +71,7 @@ public class ArrivalProcess implements CProjectVariables{
 	private int newClicks = 0;
 	private int rpclicks; private int hnclicks;
 	HashMap<String, Double[]> sample1 = null;
-	
+	boolean once = true;
 	/**
 	 * 
 	 */	
@@ -189,6 +193,8 @@ public class ArrivalProcess implements CProjectVariables{
    
 	public void updateArticles(List<DynamicArticleProperties> countSort, double exp) {
 		List<Integer> arrivals = arrivalofArticles();
+		BufferedWriter bw = createBufferedWriter(exp);
+		BufferedWriter bwh = createHBufferedWriter();
 		for(int it = 0; it < sampleSize; it++) {			
 			int val = arrivals.get(it);
 			
@@ -246,7 +252,7 @@ public class ArrivalProcess implements CProjectVariables{
 			upr.frontPageSelection(threshold, mpa, fda, ltempcat, allArticles, pmpa);
 			sample1 = bsu.getHashMaps(bsu.convertList(allArticles));
 			double accLoss = bsu.accuracyLoss(mpa, pmpa);			
-			double distortion = distortionMeasure(sample1, initialIds, false);
+			double distortion = distortionMeasure(sample1, initialIds, false, bw);
 			accLosses.add(accLoss);
 			//updating M1, FROM HERE update M1 for probablistic.
 			m1Plot(id10, id11, it);	
@@ -254,7 +260,8 @@ public class ArrivalProcess implements CProjectVariables{
 			
 			ArrayList<Double> ePoint = new ArrayList<Double>();
 			ePoint.add((double) (it + 1)); ePoint.add(distortion);
-			JSdistortion.add(ePoint);
+			JSdistortion.add(ePoint); 
+			JSHdistortion.add(new AdditionalMethods().distortionHMeasure(sample1, initialIds, false, bwh));
 			
 			newClicks += upr.getNewClicks();
 			rpclicks  = bsu.getRClicks(impa, bsu.convertList(allArticles));
@@ -265,10 +272,38 @@ public class ArrivalProcess implements CProjectVariables{
 				hm2Plot(newClicks, hnclicks, it);
 			}
 			
-		}		
+		}
+		try {
+			upr.printTotal();
+			bw.flush();bw.close();
+		} catch (Exception e) {			
+			e.printStackTrace();
+		}
 		//bsu.printResult(allArticles);
 	}
 	
+	private BufferedWriter createBufferedWriter(double exp) {
+		
+		BufferedWriter fr = null;		
+		try {
+			fr = new BufferedWriter(new FileWriter("counts" + exp + ".csv"));
+		} catch (Exception e) {			
+			e.printStackTrace();
+		}
+		return fr;
+	}
+	
+private BufferedWriter createHBufferedWriter() {
+		
+		BufferedWriter fr = null;		
+		try {
+			fr = new BufferedWriter(new FileWriter("hard" + ".csv"));
+		} catch (Exception e) {			
+			e.printStackTrace();
+		}
+		return fr;
+	}
+
 	private void pM1Plot(String d10, String d11, int it) {
 		ArrayList<DynamicArticleProperties> ga = bsu.tenEleven(d10, d11, bsu.convertList(allArticles));
 		DynamicArticleProperties ten = ga.get(0);
@@ -309,32 +344,56 @@ public class ArrivalProcess implements CProjectVariables{
 		hm2Points.add(datapoint);
 	}
 	
-	private double distortionMeasure(HashMap<String, Double[]> sample1, ArrayList<String> ids, boolean klornot) {
+	private double distortionMeasure(HashMap<String, Double[]> sample1, ArrayList<String> ids, boolean klornot, BufferedWriter fr) {
+		// think it in terms of share distortion.
 		// for hardcutoff use index = 2.
 		double[] initialc = new double[sample1.size()];
 		double[] updated = new double[sample1.size()];
-		
-		Iterator<Entry<String, Double[]>> it = sample1.entrySet().iterator();
-		int i = 0;
-		while(it.hasNext()) {			
-			String key = it.next().getKey(); 			
-			boolean initial  = false;
-			for(String id : ids) {
-				if(id.equalsIgnoreCase(key)) {
-					initial = true;
-					break;
+		StringBuilder sb1 = new StringBuilder();
+		StringBuilder sb2 = new StringBuilder();
+		try {			
+			Iterator<Entry<String, Double[]>> it = sample1.entrySet().iterator();
+			int i = 0;
+			while(it.hasNext()) {			
+				String key = it.next().getKey(); 			
+				boolean initial  = false;
+				for(String id : ids) {
+					if(id.equalsIgnoreCase(key)) {
+						initial = true;
+						break;
+					}
 				}
+				
+				if(initial) {
+					initialc[i] = sample1.get(key)[0]; sb1.append(initialc[i] + ", ");
+					updated[i] = sample1.get(key)[1];  sb2.append(updated[i] + ", ");  
+				} else {
+					initialc[i] = (double) 0; sb1.append(initialc[i] + ", "); 
+					updated[i] = sample1.get(key)[1]; sb2.append(updated[i] + ", "); 
+				}
+				i++;
+			}
+			if(once) {
+				fr.write(sb1.toString());
+				fr.newLine();
+				once = false;
 			}
 			
-			if(initial) {
-				initialc[i] = sample1.get(key)[0];
-				updated[i] = sample1.get(key)[1];	//System.out.println("tracking : " + sample1.get(key)[0] + ", " + sample1.get(key)[1]);	 		
-			} else {
-				initialc[i] = (double) 0;
-				updated[i] = sample1.get(key)[1]; 
-			}
-			i++;
+			fr.write(sb2.toString());
+			fr.newLine();
+			
+		} catch (IOException e) {			
+			e.printStackTrace();
 		}
+		
+		double initialc1 = StatUtils.sum(initialc);
+		double updated1 = StatUtils.sum(updated);
+		
+		for (int i = 0; i < updated.length; i++) {
+			initialc[i] = initialc[i]/initialc1;
+			updated[i] = updated[i]/updated1;
+		}
+		
 		if(klornot) {
 			return Maths.klDivergence(initialc, updated);
 		} else {
@@ -385,6 +444,10 @@ public class ArrivalProcess implements CProjectVariables{
 		}
 		
 		return sum/n;
+	}
+
+	public ArrayList<Double> getJHSDistortion() {		
+		return JSHdistortion;
 	}
 
 }

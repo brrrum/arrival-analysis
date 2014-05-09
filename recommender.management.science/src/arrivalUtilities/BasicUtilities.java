@@ -1,5 +1,7 @@
 package arrivalUtilities;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
@@ -378,5 +380,14 @@ public class BasicUtilities {
 		}
 		return sample;
 		
+	}
+	
+	public void writeCounts(BufferedWriter bw, String data) {
+		try {
+			bw.write(data); bw.newLine();
+		} catch (Exception e) {
+			
+			e.printStackTrace();
+		}
 	}
 }

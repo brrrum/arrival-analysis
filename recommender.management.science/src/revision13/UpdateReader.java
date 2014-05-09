@@ -20,6 +20,7 @@ public class UpdateReader {
 	private BasicUtilities bsu = new BasicUtilities();
 	private DynamicArticleProperties pdp;
 	private int narticles;
+	private static int totalCount;
 	public UpdateReader(int seed) throws NotStrictlyPositiveException {		
 		this.seed = seed;
 	}
@@ -32,6 +33,7 @@ public class UpdateReader {
 		//ltempcat, all list of articles fda, front page list, mpa, most popular 
 		rand = new Random(seed);		
 		narticles = (int) Math.floor(inv.inverseF(rand.nextDouble())+1);
+		totalCount += narticles;
 		if( narticles > 15) {
 			narticles = 15;
 		}
@@ -164,6 +166,10 @@ public class UpdateReader {
 	
 	public int getNewClicks() {
 		return narticles;
+	}
+	
+	public void printTotal() {
+		System.out.println("totalCount : " + totalCount);
 	}
 
 }
