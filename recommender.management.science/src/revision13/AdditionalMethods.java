@@ -13,7 +13,7 @@ import cc.mallet.util.Maths;
 
 public class AdditionalMethods {
 	
-	private boolean once = true;
+	private static boolean once = true;
 	
 	public double distortionHMeasure(HashMap<String, Double[]> sample1, ArrayList<String> ids, boolean klornot, BufferedWriter fr) {
 		// think it in terms of share distortion.

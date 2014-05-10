@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -17,6 +18,8 @@ import com.fasterxml.uuid.EthernetAddress;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedGenerator;
 
+import revision13.AdditionalMethods;
+import revision13.ArrivalProcess;
 import revision13.DynamicArticleProperties;
 import revision13.Generator;
 import revision13.UpdateReader;
@@ -37,11 +40,15 @@ public class ProbArrival {
 	private static EthernetAddress addr = EthernetAddress.fromInterface();
 	private static TimeBasedGenerator uuidGenerator = Generators.timeBasedGenerator(addr);
 	private ArrayList<String> initialIds = new ArrayList<String>();
-	ArrayList<ArrayList<Double>> datapoints = new ArrayList<ArrayList<Double>>();
-	ArrayList<ArrayList<Double>> pdatapoints = new ArrayList<ArrayList<Double>>();
+	private ArrayList<ArrayList<Double>> datapoints = new ArrayList<ArrayList<Double>>();
+	private ArrayList<ArrayList<Double>> pdatapoints = new ArrayList<ArrayList<Double>>();
+	private ArrayList<ArrayList<Double>> JSdistortion = new ArrayList<ArrayList<Double>>();	
+	private ArrayList<Double> JSHdistortion = new ArrayList<Double>();
+	private ArrayList<Double> accLosses = new ArrayList<Double>();
 	private BasicUtilities bsu = new BasicUtilities();
 	private Random rand = new Random(7000); 
 	private ArrayList<LinkedList<DynamicArticleProperties>> allArticles= new ArrayList<LinkedList<DynamicArticleProperties>>();
+	HashMap<String, Double[]> sample1 = null;
 
 	public ProbArrival(Generator gr, int numberofreaders, double[] prob) {
 		this.gr = gr;	
@@ -59,7 +66,7 @@ public class ProbArrival {
 		for(int k = 0; k < 80; k++) {
 			gr.setSeed(gr.refreshRNG());
 			ZipfDistribution zpf = new ZipfDistribution(gr, INITIAL_COUNTS, POWER_EXPONENT);
-			int count = zpf.sample();
+			int count = zpf.sample();			
 			String time = Long.toString(getInitials().timestamp());
 			time = time.substring(6);
 			DynamicArticleProperties dnp = new DynamicArticleProperties(getInitials().toString(), count, Long.parseLong(time));
@@ -130,16 +137,39 @@ public class ProbArrival {
 			double exp) {
 		BufferedWriter bw = createBufferedWriter(exp, false);
 		BufferedWriter bwh = createBufferedWriter(exp, true); 
-		for(int it = 0; it < sampleSize; it++) {	
+		
+		for(int it = 0; it < sampleSize; it++) {
+			
+			ArrivalProcess arrivals = new ArrivalProcess();
 			int tempseed = refreshRNG();
 			pmpa = bsu.pMostPopular(tempseed, countSort, bsu.convertList(allArticles), exp);
 			upr = new ProbUpdate(refreshRNG());
 			upr.frontPageSelection(prob, mpa, fda, allArticles, pmpa);
+			
+			sample1 = bsu.getHashMaps(bsu.convertList(allArticles));
+			double accLoss = bsu.accuracyLoss(mpa, pmpa);	
+			double distortion = arrivals.distortionMeasure(sample1, initialIds, false, bw);
+			accLosses.add(accLoss);
+			m1Plot(id10, id11, it);
+			pM1Plot(id10, id11, it);;
+			
+			ArrayList<Double> ePoint = new ArrayList<Double>();
+			ePoint.add((double) (it + 1)); ePoint.add(distortion);
+			JSdistortion.add(ePoint); 
+			JSHdistortion.add(new AdditionalMethods().distortionHMeasure(sample1, initialIds, false, bwh));			
+		}
+		
+		try {
+			upr.printTotal();
+			bw.flush();bw.close(); 
+			bwh.flush(); bwh.close();
+		} catch (Exception e) {			
+			e.printStackTrace();
 		}
 		
 	}
 
-	private int refreshRNG() {
+	public int refreshRNG() {
 		int seed = rand.nextInt();
 		return seed;
 	}
@@ -160,5 +190,51 @@ public class ProbArrival {
 		}
 		return fr;
 	}
+	
+	private void m1Plot(String d10, String d11, int it) {		
+		ArrayList<DynamicArticleProperties> ga = bsu.tenEleven(d10, d11, bsu.convertList(allArticles));
+		DynamicArticleProperties ten = ga.get(0);
+		DynamicArticleProperties ele = ga.get(1);
+		ArrayList<Double> datapoint = new ArrayList<Double>();
+		datapoint.add((double) it+1);
+		datapoint.add(Math.log(((double)ten.getCurrentClicks()/(double)ele.getCurrentClicks())));
+		datapoints.add(datapoint);	
+	}
+
+	private void pM1Plot(String d10, String d11, int it) {
+		ArrayList<DynamicArticleProperties> ga = bsu.tenEleven(d10, d11, bsu.convertList(allArticles));
+		DynamicArticleProperties ten = ga.get(0);
+		DynamicArticleProperties ele = ga.get(1);
+		ArrayList<Double> datapoint = new ArrayList<Double>();
+		datapoint.add((double) it+1);
+		datapoint.add(Math.log(((double)ten.getPcurrentClicks()/(double)ele.getPcurrentClicks())));
+		pdatapoints.add(datapoint);	
+	}
+	
+	public ArrayList<ArrayList<Double>> getJSDistortion() {
+		return JSdistortion;
+	}
+	
+	public ArrayList<Double> getJHSDistortion() {		
+		return JSHdistortion;
+	}
+	
+	public double getAverageAccuracyLoss() { //at the end of simulation
+		double sum = 0;
+		double n = accLosses.size();
+		for(int i = 0; i < n; i++) {
+			sum += accLosses.get(i);
+		}
+		
+		return sum/n; 
+	}
+	
+	public ArrayList<ArrayList<Double>> getHSimulationPoints() {
+		return datapoints;
+	}
+	
+	public ArrayList<ArrayList<Double>> getPSimulationPoints() {
+		return pdatapoints;
+	}	
 
 }

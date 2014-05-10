@@ -29,7 +29,7 @@ public class ProbUpdate {
 		
 		rand = new Random(seed);
 		//narticles = (int) Math.floor(inv.inverseF(rand.nextDouble())+1);
-		narticles = 2;
+		narticles = 1;
 		totalCount += narticles;
 		if( narticles > 15) {
 			narticles = 15;
@@ -54,14 +54,15 @@ public class ProbUpdate {
 			boolean categorized, ArrayList<LinkedList<DynamicArticleProperties>> allArticles, ArrayList<DynamicArticleProperties> pmpa) {
 		
 		DynamicArticleProperties dp = null;
-		if(mp) {
-			Random random = new Random(seed);
+		Random random = new Random(seed);
+		if(mp) {			
 			int index = random.nextInt(displayed);
 			dp = dap.get(index);
-			pdp = pmpa.get(index);			
+			pdp = pmpa.get(index);	
 			
-		}  else if(categorized) {
-			Random random = new Random(seed);
+			double pCount = pdp.getPcurrentClicks() + 1;
+			pdp.setPcurrentClicks(pCount); 
+		}  else if(categorized) {			
 			int catindex = random.nextInt(BasicUtilities.getCategories().size());
 			LinkedList<DynamicArticleProperties> scat = allArticles.get(catindex);
 			int index = bsu.readPattern(displayed, seed);
@@ -71,10 +72,8 @@ public class ProbUpdate {
 				dp = dap.get(index);
 				
 			}
-		int count = dp.getCurrentClicks() + 1;
-		double pCount = pdp.getPcurrentClicks() + 1;
-		dp.setCurrentClicks(count);
-		pdp.setPcurrentClicks(pCount); 
+		int count = dp.getCurrentClicks() + 1;		
+		dp.setCurrentClicks(count);		
 		return dp;		
 	}
 	

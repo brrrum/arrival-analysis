@@ -1,5 +1,8 @@
 package concept.test;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,7 +32,7 @@ import umontreal.iro.lecuyer.probdist.InverseGaussianDist;
 public class Test1Main {	
 	private static final double numberOfReaders = 500;
 	private static double[] exponent = { 1, 2, 3};
-	static double[] prob  = { 0.6, 0.4};
+	static double[] prob  = { 1, 0, 0}; 
 	
 	public static void main(String[] args) {		
 		Generator gr = new Generator();
@@ -41,11 +44,40 @@ public class Test1Main {
 		
 		ProbArrival arrivals = new ProbArrival(gr, (int) numberOfReaders, prob);
 		arrivals.seedArticles(articleList, initialTimeSort, countSort);
-		arrivals.updateArticles(countSort, exponent[0]); 
+		double exp = exponent[0];
+		arrivals.updateArticles(countSort, exp); 
 		
+		writing1Column(arrivals.getJHSDistortion(), "C:/academic/" + "HJSDistortion" + "-" + exp + ".csv");
+		writing2Column(arrivals.getJSDistortion(), "C:/academic/" + "JSDistortion" + "-" + exp + ".csv");
+		writing2Column(arrivals.getHSimulationPoints(), "C:/academic/" + "HM1" + "-" + exp + ".csv");
+		writing2Column(arrivals.getPSimulationPoints(), "C:/academic/" + "PM1" + "-" + exp + ".csv"); 
+	}
+	
+	private static void writing2Column(ArrayList<ArrayList<Double>> data, String path) {
+		try {
+			BufferedWriter bw  = new BufferedWriter(new FileWriter(path));
+			for(int i = 0; i < data.size(); i++) {
+				bw.write(Double.toString(data.get(i).get(0))+","+Double.toString(data.get(i).get(1)));	
+				bw.newLine();
+			}
+			bw.flush(); bw.close();
+		} catch (IOException e) {			
+			e.printStackTrace();
+		}
 		
 	}
 	
-	
+	private static void writing1Column(ArrayList<Double> data, String path) {
+		try {
+			BufferedWriter bw  = new BufferedWriter(new FileWriter(path));
+			for(int i = 0; i < data.size(); i++) {
+				bw.write(Double.toString(data.get(i)));	
+				bw.newLine();
+			}
+			bw.flush(); bw.close();
+		} catch (IOException e) {			
+			e.printStackTrace();
+		}		
+	}
 
 }

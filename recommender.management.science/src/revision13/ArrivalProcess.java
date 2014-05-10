@@ -30,7 +30,6 @@ import com.fasterxml.uuid.EthernetAddress;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedGenerator;
 
-import concept.test.MethodT;
 import extension.copy.CExponent;
 import extension.copy.CProjectVariables;
 import extension.copy.CUtilities;
@@ -71,7 +70,7 @@ public class ArrivalProcess implements CProjectVariables{
 	private int newClicks = 0;
 	private int rpclicks; private int hnclicks;
 	HashMap<String, Double[]> sample1 = null;
-	boolean once = true;
+	static boolean once = true;
 	/**
 	 * 
 	 */	
@@ -92,6 +91,10 @@ public class ArrivalProcess implements CProjectVariables{
 		this.gr = rng;		
 	}
 	
+	public ArrivalProcess() {
+		
+	}
+
 	public List<Integer> arrivalofArticles() {		
 		
 		Integer[] newsamples = new Integer[sampleSize];
@@ -275,7 +278,7 @@ public class ArrivalProcess implements CProjectVariables{
 		}
 		try {
 			upr.printTotal();
-			bw.flush();bw.close();
+			bw.flush();bw.close(); bwh.flush(); bwh.close();
 		} catch (Exception e) {			
 			e.printStackTrace();
 		}
@@ -304,7 +307,7 @@ private BufferedWriter createHBufferedWriter() {
 		return fr;
 	}
 
-	private void pM1Plot(String d10, String d11, int it) {
+	public void pM1Plot(String d10, String d11, int it) {
 		ArrayList<DynamicArticleProperties> ga = bsu.tenEleven(d10, d11, bsu.convertList(allArticles));
 		DynamicArticleProperties ten = ga.get(0);
 		DynamicArticleProperties ele = ga.get(1);
@@ -315,7 +318,7 @@ private BufferedWriter createHBufferedWriter() {
 		
 	}
 
-	private void m1Plot(String d10, String d11, int it) {
+	public void m1Plot(String d10, String d11, int it) {
 		
 		ArrayList<DynamicArticleProperties> ga = bsu.tenEleven(d10, d11, bsu.convertList(allArticles));
 		DynamicArticleProperties ten = ga.get(0);
@@ -326,7 +329,7 @@ private BufferedWriter createHBufferedWriter() {
 		datapoints.add(datapoint);	
 	}
 	
-	private void pm2Plot(int ntClicks, int rclicks, int it) {
+	public void pm2Plot(int ntClicks, int rclicks, int it) {
 		double ratio = (double)rclicks/(double)ntClicks;		
 		double m2 = (1 - ratio)*100;
 		ArrayList<Double> datapoint = new ArrayList<Double>();
@@ -344,7 +347,7 @@ private BufferedWriter createHBufferedWriter() {
 		hm2Points.add(datapoint);
 	}
 	
-	private double distortionMeasure(HashMap<String, Double[]> sample1, ArrayList<String> ids, boolean klornot, BufferedWriter fr) {
+	public double distortionMeasure(HashMap<String, Double[]> sample1, ArrayList<String> ids, boolean klornot, BufferedWriter fr) {
 		// think it in terms of share distortion.
 		// for hardcutoff use index = 2.
 		double[] initialc = new double[sample1.size()];
