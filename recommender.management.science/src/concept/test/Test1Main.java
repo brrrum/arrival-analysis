@@ -30,8 +30,8 @@ import revision13.frontPageAndUpcoming;
 import umontreal.iro.lecuyer.probdist.InverseGaussianDist;
 
 public class Test1Main {	
-	private static final double numberOfReaders = 500;
-	private static double[] exponent = { 1, 2, 3};
+	private static final double numberOfReaders = 30000;
+	private static double[] exponent = { 1, 2, 3, 4, 5, 6};
 	static double[] prob  = { 1, 0, 0}; 
 	
 	public static void main(String[] args) {		
@@ -44,20 +44,26 @@ public class Test1Main {
 		
 		ProbArrival arrivals = new ProbArrival(gr, (int) numberOfReaders, prob);
 		arrivals.seedArticles(articleList, initialTimeSort, countSort);
-		double exp = exponent[0];
+		double exp = 1; 
 		arrivals.updateArticles(countSort, exp); 
-		
-		writing1Column(arrivals.getJHSDistortion(), "C:/academic/" + "HJSDistortion" + "-" + exp + ".csv");
-		writing2Column(arrivals.getJSDistortion(), "C:/academic/" + "JSDistortion" + "-" + exp + ".csv");
-		writing2Column(arrivals.getHSimulationPoints(), "C:/academic/" + "HM1" + "-" + exp + ".csv");
-		writing2Column(arrivals.getPSimulationPoints(), "C:/academic/" + "PM1" + "-" + exp + ".csv"); 
+				
+		writing2Column(arrivals.getJSDistortion(), arrivals.getJHSDistortion(),
+				"C:/academic/" + "JSDistortion" + "-" + exp + ".csv");		
+		writing2Column(arrivals.getPSimulationPoints(), arrivals.getHSimulationPoints(),
+				"C:/academic/" + "M1" + "-" + exp + ".csv");
+		writing2Column(arrivals.getpm2Plot(), arrivals.gethm2Plot(),
+				"C:/academic/" + "M2" + "-" + exp + ".csv");
 	}
 	
-	private static void writing2Column(ArrayList<ArrayList<Double>> data, String path) {
+	private static void writing2Column(ArrayList<ArrayList<Double>> data1, 
+			ArrayList<ArrayList<Double>> data2,String path) {
 		try {
 			BufferedWriter bw  = new BufferedWriter(new FileWriter(path));
-			for(int i = 0; i < data.size(); i++) {
-				bw.write(Double.toString(data.get(i).get(0))+","+Double.toString(data.get(i).get(1)));	
+			bw.write("iteration" + ","+ "prob" + "," + "hard"); 
+			bw.newLine();
+			for(int i = 0; i < data1.size(); i++) {				
+				bw.write(Double.toString(data1.get(i).get(0))+","+Double.toString(data1.get(i).get(1))
+						+","+Double.toString(data2.get(i).get(1)));	
 				bw.newLine();
 			}
 			bw.flush(); bw.close();

@@ -42,13 +42,17 @@ public class ProbArrival {
 	private ArrayList<String> initialIds = new ArrayList<String>();
 	private ArrayList<ArrayList<Double>> datapoints = new ArrayList<ArrayList<Double>>();
 	private ArrayList<ArrayList<Double>> pdatapoints = new ArrayList<ArrayList<Double>>();
+	ArrayList<ArrayList<Double>> pm2Points = new ArrayList<ArrayList<Double>>();
+	ArrayList<ArrayList<Double>> hm2Points = new ArrayList<ArrayList<Double>>();
 	private ArrayList<ArrayList<Double>> JSdistortion = new ArrayList<ArrayList<Double>>();	
-	private ArrayList<Double> JSHdistortion = new ArrayList<Double>();
+	private ArrayList<ArrayList<Double>> JSHdistortion = new ArrayList<ArrayList<Double>>();
 	private ArrayList<Double> accLosses = new ArrayList<Double>();
 	private BasicUtilities bsu = new BasicUtilities();
 	private Random rand = new Random(7000); 
 	private ArrayList<LinkedList<DynamicArticleProperties>> allArticles= new ArrayList<LinkedList<DynamicArticleProperties>>();
 	HashMap<String, Double[]> sample1 = null;
+	private int newClicks = 0;
+	private int rpclicks; private int hnclicks;
 
 	public ProbArrival(Generator gr, int numberofreaders, double[] prob) {
 		this.gr = gr;	
@@ -66,7 +70,9 @@ public class ProbArrival {
 		for(int k = 0; k < 80; k++) {
 			gr.setSeed(gr.refreshRNG());
 			ZipfDistribution zpf = new ZipfDistribution(gr, INITIAL_COUNTS, POWER_EXPONENT);
-			int count = zpf.sample();			
+			int count = zpf.sample();//distribution need to fixed
+			Random rand = new Random();
+			count = rand.nextInt(1000);			
 			String time = Long.toString(getInitials().timestamp());
 			time = time.substring(6);
 			DynamicArticleProperties dnp = new DynamicArticleProperties(getInitials().toString(), count, Long.parseLong(time));
@@ -148,15 +154,22 @@ public class ProbArrival {
 			
 			sample1 = bsu.getHashMaps(bsu.convertList(allArticles));
 			double accLoss = bsu.accuracyLoss(mpa, pmpa);	
-			double distortion = arrivals.distortionMeasure(sample1, initialIds, false, bw);
+			double distortion = arrivals.distortionMeasure(sample1, initialIds, true, bw);
 			accLosses.add(accLoss);
 			m1Plot(id10, id11, it);
 			pM1Plot(id10, id11, it);;
 			
 			ArrayList<Double> ePoint = new ArrayList<Double>();
-			ePoint.add((double) (it + 1)); ePoint.add(distortion);
-			JSdistortion.add(ePoint); 
-			JSHdistortion.add(new AdditionalMethods().distortionHMeasure(sample1, initialIds, false, bwh));			
+			ArrayList<Double> ehPoint = new ArrayList<Double>();
+			ePoint.add((double) (it + 1)); ehPoint.add((double) (it + 1));
+			ePoint.add(distortion); JSdistortion.add(ePoint); 
+			ehPoint.add(new AdditionalMethods().distortionHMeasure(sample1, initialIds, true, bwh));
+			JSHdistortion.add(ehPoint);	
+			newClicks += upr.getNewClicks();
+			rpclicks  = bsu.getRClicks(impa, bsu.convertList(allArticles));
+			pm2Plot(newClicks, rpclicks, it);
+			hnclicks = bsu.getHRClicks(impa, bsu.convertList(allArticles));
+			hm2Plot(newClicks, hnclicks, it);
 		}
 		
 		try {
@@ -211,11 +224,29 @@ public class ProbArrival {
 		pdatapoints.add(datapoint);	
 	}
 	
+	public void pm2Plot(int ntClicks, int rclicks, int it) {
+		double ratio = (double)rclicks/(double)ntClicks;		
+		double m2 = (1 - ratio)*100;
+		ArrayList<Double> datapoint = new ArrayList<Double>();
+		datapoint.add((double) it+1);
+		datapoint.add(m2);
+		pm2Points.add(datapoint);
+	}
+	
+	public void hm2Plot(int ntClicks, int rclicks, int it) {
+		double ratio = (double)rclicks/(double)ntClicks;		
+		double m2 = (1 - ratio)*100;
+		ArrayList<Double> datapoint = new ArrayList<Double>();
+		datapoint.add((double) it+1);
+		datapoint.add(m2);
+		hm2Points.add(datapoint);
+	}
+	
 	public ArrayList<ArrayList<Double>> getJSDistortion() {
 		return JSdistortion;
 	}
 	
-	public ArrayList<Double> getJHSDistortion() {		
+	public ArrayList<ArrayList<Double>> getJHSDistortion() {		
 		return JSHdistortion;
 	}
 	
@@ -235,6 +266,14 @@ public class ProbArrival {
 	
 	public ArrayList<ArrayList<Double>> getPSimulationPoints() {
 		return pdatapoints;
-	}	
+	}
+	
+	public ArrayList<ArrayList<Double>> getpm2Plot() {
+		return pm2Points;
+	}
+	
+	public ArrayList<ArrayList<Double>> gethm2Plot() {
+		return hm2Points;
+	}
 
 }

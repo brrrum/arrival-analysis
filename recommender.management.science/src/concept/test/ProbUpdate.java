@@ -114,6 +114,10 @@ public void updateInAll(DynamicArticleProperties dp, ArrayList<LinkedList<Dynami
 	public void printTotal() {
 		System.out.println("totalCount : " + totalCount);
 	}
+	
+	public int getNewClicks() {
+		return narticles;
+	}
 
 	
 

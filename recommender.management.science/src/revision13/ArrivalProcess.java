@@ -338,7 +338,7 @@ private BufferedWriter createHBufferedWriter() {
 		pm2Points.add(datapoint);
 	}
 	
-	private void hm2Plot(int ntClicks, int rclicks, int it) {
+	public void hm2Plot(int ntClicks, int rclicks, int it) {
 		double ratio = (double)rclicks/(double)ntClicks;		
 		double m2 = (1 - ratio)*100;
 		ArrayList<Double> datapoint = new ArrayList<Double>();
