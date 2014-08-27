@@ -16,7 +16,7 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.UUID;
 
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.apache.commons.math3.exception.NotStrictlyPositiveException;
@@ -39,9 +39,7 @@ public class ArrivalProcess implements CProjectVariables{
 	
 	private int sampleSize;
 	private double arrivalRate;
-	private String id10, id11;
-	private static String resultsPath = "C:/academic/recommender system 2/Management Science/review/simulation-Results/";
-	//C:/Users/sprawesh/git/arrival-analysis/recommender.management.science/
+	private String id10, id11;	
 	private static int INITIAL_COUNTS = 1000;	
 	private static double POWER_EXPONENT = 1.4;
 	private double[] threshold;
@@ -53,6 +51,8 @@ public class ArrivalProcess implements CProjectVariables{
 	ArrayList<ArrayList<Double>> hm2Points = new ArrayList<ArrayList<Double>>();
 	ArrayList<ArrayList<Double>> pdatapoints = new ArrayList<ArrayList<Double>>();
 	private ArrayList<Double> accLosses = new ArrayList<Double>();
+	private ArrayList<Double> exAccLoss = new ArrayList<Double>();
+	private static ArrayList<Double> normAccLoss = new ArrayList<Double>();
 	private ArrayList<String> initialIds = new ArrayList<String>();
 	private BasicUtilities bsu = new BasicUtilities();
 	private static EthernetAddress addr = EthernetAddress.fromInterface();
@@ -123,6 +123,10 @@ public class ArrivalProcess implements CProjectVariables{
 			gr.setSeed(gr.refreshRNG());
 			ZipfDistribution zpf = new ZipfDistribution(gr, INITIAL_COUNTS, POWER_EXPONENT);
 			int count = zpf.sample();
+			
+			Random rand2 = new Random(refreshRNG()); 
+			count = rand2.nextInt(1000);
+			
 			String time = Long.toString(getInitials().timestamp());
 			time = time.substring(6);
 			DynamicArticleProperties dnp = new DynamicArticleProperties(getInitials().toString(), count, Long.parseLong(time));
@@ -196,8 +200,10 @@ public class ArrivalProcess implements CProjectVariables{
    
 	public void updateArticles(List<DynamicArticleProperties> countSort, double exp) {
 		List<Integer> arrivals = arrivalofArticles();
-		BufferedWriter bw = createBufferedWriter(exp);
-		BufferedWriter bwh = createHBufferedWriter();
+		//avoiding expensive writing
+		BufferedWriter bw = null, bwh = null; 
+		//BufferedWriter bw = createBufferedWriter(exp);
+		//BufferedWriter bwh = createHBufferedWriter();
 		for(int it = 0; it < sampleSize; it++) {			
 			int val = arrivals.get(it);
 			
@@ -205,7 +211,8 @@ public class ArrivalProcess implements CProjectVariables{
 				gr.setSeed(gr.refreshRNG());
 				ZipfDistribution zpf = new ZipfDistribution(gr, INITIAL_COUNTS, POWER_EXPONENT);
 				int count = zpf.sample(); // NEED TO FIXED IN FUTURE
-				String time = Long.toString(getInitials().timestamp());
+				String time = Long.toString(getInitials().timestamp());				
+				
 				time = time.substring(6);
 				DynamicArticleProperties dnp = new DynamicArticleProperties(getInitials().toString(), count, Long.parseLong(time));
 				dnp.setCurrentClicks(count);
@@ -249,14 +256,20 @@ public class ArrivalProcess implements CProjectVariables{
 			pmpa = bsu.pMostPopular(tempseed, countSort, bsu.convertList(allArticles), exp);
 			//System.out.println("prob popular : " + bsu.writeValue(pmpa, true)); 
 			//List<DynamicArticleProperties> copy = bsu.convertList(allArticles); //bsu.sortCont(copy);	 
-			upr = new UpdateReader(refreshRNG());
-			
-			//System.out.println("clicks : " + cl +" psum : " + bsu.printPSum(bsu.convertList(allArticles)) + "sum : " + bsu.printSum(bsu.convertList(allArticles))); 
+			upr = new UpdateReader(refreshRNG());			
+			 
 			upr.frontPageSelection(threshold, mpa, fda, ltempcat, allArticles, pmpa);
+			//System.out.println(" psum : " + bsu.printPSum(bsu.convertList(allArticles)) + "sum : " + bsu.printSum(bsu.convertList(allArticles)));
 			sample1 = bsu.getHashMaps(bsu.convertList(allArticles));
-			double accLoss = bsu.accuracyLoss(mpa, pmpa);			
+			double accLoss = bsu.accuracyLoss(mpa, pmpa);
+			double normalizedValue = bsu.normalizedAccuracyLoss(mpa, pmpa, allArticles, meanArticles, threshold, fda);//here mpa and pmpa are old counts
+			double expectedAccLoss = bsu.expectedAccuracyLoss(mpa, pmpa, allArticles, meanArticles, threshold); //allArticles has been updated			
+			// store normalizedValue in a Array List.
+			/*************Accuracy Loss Adjustment*****************/
 			double distortion = distortionMeasure(sample1, initialIds, false, bw);
 			accLosses.add(accLoss);
+			exAccLoss.add(expectedAccLoss);
+			/*******************Accuracy Loss Normalization***********/
 			//updating M1, FROM HERE update M1 for probablistic.
 			m1Plot(id10, id11, it);	
 			pM1Plot(id10, id11, it);		
@@ -270,7 +283,8 @@ public class ArrivalProcess implements CProjectVariables{
 			rpclicks  = bsu.getRClicks(impa, bsu.convertList(allArticles));
 			pm2Plot(newClicks, rpclicks, it);
 			
-			if(exp == 1) { // we need to execute it once for M2, extreme case			
+			if(exp == 1) { // we need to execute it once for M2, extreme case
+				normAccLoss.add(normalizedValue);
 				hnclicks = bsu.getHRClicks(impa, bsu.convertList(allArticles));
 				hm2Plot(newClicks, hnclicks, it);
 			}
@@ -278,14 +292,14 @@ public class ArrivalProcess implements CProjectVariables{
 		}
 		try {
 			upr.printTotal();
-			bw.flush();bw.close(); bwh.flush(); bwh.close();
+			//bw.flush();bw.close(); bwh.flush(); bwh.close();
 		} catch (Exception e) {			
 			e.printStackTrace();
 		}
 		//bsu.printResult(allArticles);
 	}
 	
-	private BufferedWriter createBufferedWriter(double exp) {
+	public BufferedWriter createBufferedWriter(double exp) {
 		
 		BufferedWriter fr = null;		
 		try {
@@ -296,7 +310,7 @@ public class ArrivalProcess implements CProjectVariables{
 		return fr;
 	}
 	
-private BufferedWriter createHBufferedWriter() {
+public BufferedWriter createHBufferedWriter() {
 		
 		BufferedWriter fr = null;		
 		try {
@@ -377,15 +391,15 @@ private BufferedWriter createHBufferedWriter() {
 				i++;
 			}
 			if(once) {
-				fr.write(sb1.toString());
-				fr.newLine();
+				//fr.write(sb1.toString());
+				//fr.newLine();
 				once = false;
 			}
 			
-			fr.write(sb2.toString());
-			fr.newLine();
+			//fr.write(sb2.toString());
+			//fr.newLine();
 			
-		} catch (IOException e) {			
+		} catch (Exception e) {			
 			e.printStackTrace();
 		}
 		
@@ -425,15 +439,26 @@ private BufferedWriter createHBufferedWriter() {
 		return hm2Points;
 	}
 	
-	public double getAverageAccuracyLoss() { //at the end of simulation
+	public ArrayList<Double> getaccLosses() {
+		return accLosses;
+	}
+	
+	public ArrayList<Double> getExpAccLosses() {
+		return exAccLoss;
+	}
+	
+	public ArrayList<Double> getNormAccLoss() {
+		return normAccLoss;
+	}
+	
+	public double getAverageAccuracyLoss(ArrayList<Double> accLosses) { //at the end of simulation
 		double sum = 0;
 		double n = accLosses.size();
 		for(int i = 0; i < n; i++) {
 			sum += accLosses.get(i);
-		}
-		
+		}		
 		return sum/n; 
-	}
+	}	
 	
 	public ArrayList<ArrayList<Double>> getJSDistortion() {
 		return JSdistortion;
@@ -451,6 +476,6 @@ private BufferedWriter createHBufferedWriter() {
 
 	public ArrayList<Double> getJHSDistortion() {		
 		return JSHdistortion;
-	}
+	}	
 
 }

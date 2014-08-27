@@ -26,7 +26,6 @@ import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.ui.ApplicationFrame;
 import org.jfree.util.ShapeUtilities;
 
-import com.lowagie.text.Image;
 
 public class TrajectoryPlots extends ApplicationFrame {
 	

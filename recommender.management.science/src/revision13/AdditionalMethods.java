@@ -45,15 +45,15 @@ public class AdditionalMethods {
 				i++;
 			}
 			if(once) {
-				fr.write(sb1.toString());
-				fr.newLine();
+				//fr.write(sb1.toString());
+				//fr.newLine();
 				once = false;
 			}
 			
-			fr.write(sb2.toString());
-			fr.newLine();
+			//fr.write(sb2.toString());
+			//fr.newLine();
 			
-		} catch (IOException e) {			
+		} catch (Exception e) {			
 			e.printStackTrace();
 		}
 		

@@ -1,10 +1,10 @@
 package revision13;
 
-import java.awt.image.BufferedImage;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -13,18 +13,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import javax.imageio.ImageIO;
-import javax.swing.JFrame;
-
-import org.jfree.ui.RefineryUtilities;
-
-import arrivalUtilities.TrajectoryPlots;
-
 public class TemporaryControl {
 	
-	private static final double numberOfReaders = 10000; //lambda = .005
-	private static final double newArticles = 20;
+	private static final double numberOfReaders = 10; //lambda = .005	
 	private static double[] exponent = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };	
+	private static DecimalFormat format = new DecimalFormat("0.00000000");
 	
 	private static ArrayList<double[]> rsensitivity() {	
 		ArrayList<double[]> probs = new ArrayList<double[]>();
@@ -34,8 +27,10 @@ public class TemporaryControl {
 		double[] prob4  = { 0.4, 0.4, 0.2 };		
 		double[] prob5 =  { 0.5, 0.3, 0.2 };
 		double[] prob6  = { 0.6, 0.2, 0.2 };
+		double[] prob7  = { 0.7, 0.2, 0.1 };
+		double[] prob8 =  { 0.8, 0.1, 0.1 };
 		probs.add(prob1); probs.add(prob2); probs.add(prob3); probs.add(prob4); probs.add(prob5);
-		probs.add(prob6);
+		probs.add(prob6); probs.add(prob7); probs.add(prob8);
 		
 		return probs;
 	}
@@ -43,11 +38,11 @@ public class TemporaryControl {
 	private class RunWithThread implements Runnable {
 		
 		double[] prob = new double[3];
-		int i;
+		int it;
 		
 		public RunWithThread(double[] prob, int i) {
 			this.prob = prob;
-			this.i = i;
+			this.it = i;
 		}
 
 		@Override
@@ -57,18 +52,20 @@ public class TemporaryControl {
 			ArrayList<ArrayList<ArrayList<Double>>> m2datapoints = new ArrayList<ArrayList<ArrayList<Double>>>();
 			ArrayList<ArrayList<ArrayList<Double>>> rentropies = new ArrayList<ArrayList<ArrayList<Double>>>();
 			ArrayList<ArrayList<Double>> acclosses = new ArrayList<ArrayList<Double>>();
+			ArrayList<ArrayList<Double>> ncclosses = new ArrayList<ArrayList<Double>>();
 			ArrayList<Double> jsds = new ArrayList<Double>();
 			ArrayList<Double> hvalues = new ArrayList<Double>();
-			double lambda = 0.002;			
+			double lambda = 0.0003;			
 			
-			for(int i = 1; i <= 10; i++) {
+			for(int i = 1; i <= 1; i++) {
 				Generator gr = new Generator();
 				gr.setSeed(764545);	gr.setSeed(gr.refreshRNG());
 				
 				List<DynamicArticleProperties> articleList = new LinkedList<DynamicArticleProperties>();
 				List<DynamicArticleProperties> initialTimeSort = new LinkedList<DynamicArticleProperties>();
 				List<DynamicArticleProperties> countSort = new ArrayList<DynamicArticleProperties>();
-				ArrayList<Double> losses = new ArrayList<Double>();				
+				ArrayList<Double> losses = new ArrayList<Double>();
+				ArrayList<Double> nlosses = new ArrayList<Double>();
 				//ArrivalProcess arrivals = new ArrivalProcess((int) numberOfReaders, lambda, prob);
 				
 				ArrivalProcess arrivals = new ArrivalProcess(gr, (int) numberOfReaders, lambda, prob);	
@@ -79,7 +76,7 @@ public class TemporaryControl {
 					ArrayList<ArrayList<Double>> hard = arrivals.getHSimulationPoints(); /// arraylist with iteration and m1 value.
 					ArrayList<ArrayList<Double>> m2hard = arrivals.gethm2Plot();
 					repdatapoints.add(hard); m2datapoints.add(m2hard);
-					writesingColumn(arrivals.getJHSDistortion()); //we can skip distortion for hardcutoff
+					writesingColumn(arrivals.getJHSDistortion(), it); //we can skip distortion for hardcutoff
 				}
 				
 				ArrayList<ArrayList<Double>> prob = arrivals.getPSimulationPoints();				
@@ -87,18 +84,23 @@ public class TemporaryControl {
 				repdatapoints.add(prob); m2datapoints.add(m2prob);
 				rentropies.add(arrivals.getJSDistortion()); 
 				
-				double loss = arrivals.getAverageAccuracyLoss();
+				double loss = arrivals.getAverageAccuracyLoss(arrivals.getExpAccLosses());
+				double nloss = arrivals.getAverageAccuracyLoss(arrivals.getNormAccLoss());
+				System.out.println("loss : " + format.format(loss) + " nloss : " + format.format(nloss)); 
+				nlosses.add((double)i); nlosses.add(loss/nloss);
 				losses.add((double) i); losses.add(loss);
-				acclosses.add(losses);
+				// we are printing both previous loss metric and normalized loss metric, git test
+				acclosses.add(losses); ncclosses.add(nlosses);
 				
 				double distortion = arrivals.getAverageJSD();
 				jsds.add(distortion);
 				System.out.println("-----------new exponent " + i + "----------"); 
 			}
-			writeFile(repdatapoints, "M1" + "-" + i + ".csv");
-			writeFile(m2datapoints, "M2" + "-" + i + ".csv");
-			writeFile(rentropies, "JSDistortion" + "-" + i + ".csv");
-			writeMetric(acclosses, jsds, "Metrics" + "-" + i + ".csv");
+			writeFile(repdatapoints, "M1" + "-" + it + ".csv");
+			writeFile(m2datapoints, "M2" + "-" + it + ".csv");
+			writeFile(rentropies, "JSDistortion" + "-" + it + ".csv");
+			writeMetric(acclosses, jsds, "Metrics" + "-" + it + ".csv");
+			writeMetric(ncclosses, jsds, "nMetrics" + "-" + it + ".csv");
 		}	
 		
 	}
@@ -141,7 +143,7 @@ public class TemporaryControl {
 		ExecutorService exs = Executors.newCachedThreadPool();
 		ArrayList<Future<?>> futures = new ArrayList<Future<?>>();
 		
-		for(int i = 5; i < rsensitivity().size(); i++) {			
+		for(int i = rsensitivity().size()-1; i >= 7; i--) {			
 			TemporaryControl.RunWithThread runth = tmp.new RunWithThread(rsensitivity().get(i), i+1);
 			futures.add(exs.submit(runth)); 
 			
@@ -196,9 +198,9 @@ public class TemporaryControl {
 		//arrivals.previousReadModel(10, .8);		
 	}
 	
-	private static void writesingColumn(ArrayList<Double> data) {
+	private static void writesingColumn(ArrayList<Double> data, int it) {
 		try {
-			BufferedWriter bw  = new BufferedWriter(new FileWriter("hardDistortion.csv"));
+			BufferedWriter bw  = new BufferedWriter(new FileWriter("hardDistortion"+"-"+it+".csv")); 
 			for(int i = 0; i < data.size(); i++) {
 				bw.write(Double.toString(data.get(i)));	
 				bw.newLine();

@@ -21,6 +21,7 @@ public interface CProjectVariables {
 	 // inverse guass distribution
 	 public static double inMu = 3;
      public static double inLambda = 6.3;
+     public static double meanArticles = 1.16;
      // new Constants
      public static final int icategoryCount = 50; // initial number of articles in each category
 

@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.apache.commons.math3.exception.NotStrictlyPositiveException;

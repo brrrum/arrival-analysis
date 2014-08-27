@@ -182,9 +182,9 @@ public class BasicUtilities {
 		LinkedList<DynamicArticleProperties> pro_articles = new LinkedList<DynamicArticleProperties>();
 		
 		for(int i = 0; i < 20; i++){
-			pro_articles.add(initialTimeSort.get(i));
-			//initialTimeSort.get(i).setFront(true);
 			initialTimeSort.get(i).setBreakingNews(true);
+			pro_articles.add(initialTimeSort.get(i));
+			//initialTimeSort.get(i).setFront(true);			
 			
 			for(DynamicArticleProperties dpr: articleList){
 				if(initialTimeSort.get(i).getID().equalsIgnoreCase(dpr.getID())){
@@ -232,6 +232,22 @@ public class BasicUtilities {
 			}
 		}
 		return sublist;
+	}
+	
+	public double readPatternProb(int rank, int n) {
+		double[] d2 = new double[n];
+		for(int j=0; j<n; j++) {
+			d2[j] = j+1;
+		}
+		
+		double temp;
+		for(int j=1; j<=n-1; j++) {
+			temp = d2[j-1];
+			d2[j] = d2[j]+temp;						
+		}
+		
+		double prob = ((n+1)-rank/d2[n-1]);		
+		return prob;
 	}
 	
 	public int readPattern(int n, int seed) {
@@ -351,7 +367,149 @@ public class BasicUtilities {
 			
 		}
 		//System.out.println("topN : " + topN + " probN : " + probN); 		
-		return ((double)1/(double)n)*(topN/probN);		
+		return ((double)1/(double)n)*(Math.log(topN/probN));		
+	}
+	
+	public double normalizedAccuracyLoss(ArrayList<DynamicArticleProperties> mpa,
+			ArrayList<DynamicArticleProperties> pmpa, ArrayList<LinkedList<DynamicArticleProperties>> allArticles, 
+			double meanArticles, double[] threshold, LinkedList<DynamicArticleProperties> fda) {
+		//the expectation of total count for 10 articles, in previous time step
+		//if front or other ones need to be addressed
+		List<DynamicArticleProperties>  converted = convertList(allArticles);
+		double hsum = 0, psum = 0;
+		for(int i = 0; i < mpa.size(); i++) {			
+			psum += pmpa.get(i).getPcurrentClicks();
+		}
+		// to find the updated count articles in mpa and pmpa by searching in allArticles
+		
+		//FRONT PAGE BREAKING NEWS; AGGREGATE MAY NEED TO BE BROKEN IN INDIVIDUAL
+		double hcount;
+		for(DynamicArticleProperties dap : mpa) {
+			for(DynamicArticleProperties dapcheck : converted) {
+				// BREAK IT IN FIRST PAGE AND OTHER PAGES
+				// READING PROB = 1+ INVERSE GAUSS. READJUST IT.
+				if(dap.getCreationTime() == dapcheck.getCreationTime()) {					
+					hcount = (double)dap.getCurrentClicks();					
+					hcount = hcount + meanArticles*threshold[0]*((double)1/(double)10);			//adjust temporal ranking					
+					
+					double readProb = 0;
+					String category = dap.getCategory();
+					int index = getListIndex(getCategories(), category);
+					LinkedList<DynamicArticleProperties> categoryList = allArticles.get(index);
+					int rank = findPresence(categoryList, dap, 10);
+					
+					if(dap.getBreakingNews()) {
+						int brank = getBreakingNewsRanking(dap, fda);
+						if(rank != 0) {
+							readProb = readPatternProb(rank, fda.size()); 
+							hcount += meanArticles*threshold[1]*readProb; //CHECK THIS, make sure probabilities are correct
+						}						
+				     }
+					 else if((rank != 0) && (rank <=5)) {
+							readProb = readPatternProb(rank, 5);
+							hcount += meanArticles*threshold[2]*readProb; //NEED TO BE ADJUSTED FOR 8 CATEGORIES
+						}
+					//FIX THIS
+					else if((rank != 0)&& (rank <= 10)) {
+							readProb = readPatternProb(rank, 5);
+							hcount += meanArticles*(threshold[1]+threshold[1])*readProb; ////NEED TO BE ADJUSTED FOR 8 CATEGORIES
+						}
+					}					
+				}
+			hsum += hcount;
+			}
+		
+		for(int i = 0; i < mpa.size(); i++) {
+			if(mpa.get(i).getBreakingNews()) {
+				//TO DO, get rank and read probability
+			}
+			if(mpa.get(i).getFrontcat()) {
+				// TO DO, get rank and read probability
+			}
+			// NOW FOR REAR PAGES
+			// get category and identify ranking in the category
+			// if rank in category < 10
+			// get rank and reading probability
+			// else skip the step
+		}
+		//MAKE SURE RUNNING TOTAL IS CORRECT		
+		double totalArticles = converted.size();
+		double prExpected = psum + meanArticles*(threshold[0]*(double)10/totalArticles);
+		double normalizationValue = ((double)1/(double)10)*(Math.log(hrExpected/prExpected));
+		// now calculate share, it is useful for probabilistic selection, gamma = 1		
+		return normalizationValue;
+	}
+	
+	private int findPresence(
+			LinkedList<DynamicArticleProperties> categoryList, DynamicArticleProperties dap, int n) {
+		int rank = 1; boolean found = false;
+		for(int i = 0; i < n; i++) {
+			if(categoryList.get(i).getCreationTime() == dap.getCreationTime()) {
+				found = true;
+				break;
+			} else {
+				rank++;
+				continue;
+			}
+		}
+		if(found) {
+			return rank;
+		}
+		else 
+			return 0;
+	}
+
+	public int getBreakingNewsRanking(DynamicArticleProperties dap, LinkedList<DynamicArticleProperties> fda) {
+		
+		int rank = 1; boolean found = false;
+		for(DynamicArticleProperties dp: fda) {
+			if(dap.getCreationTime() == dp.getCreationTime()) {
+				found = true;
+				break;
+			}				
+			else {
+				rank++;
+				continue;
+			}				
+		}		
+		if(found) {
+			return rank;
+		}
+		else 
+			return 0; 
+	}
+	
+	public double expectedAccuracyLoss(ArrayList<DynamicArticleProperties> mpa, ArrayList<DynamicArticleProperties> pmpa, 
+			ArrayList<LinkedList<DynamicArticleProperties>> allArticles, double meanArticles, double[] threshold) {		
+		
+		List<DynamicArticleProperties>  converted = convertList(allArticles);
+		double htotal = 0, ptotal = 0;
+		for (DynamicArticleProperties dp : converted) {
+			htotal += dp.getCurrentClicks();
+			ptotal += dp.getPcurrentClicks();
+		}		
+		
+		double psum = 0, hsum = 0;
+		for(DynamicArticleProperties dap : mpa) {
+			for(DynamicArticleProperties dapcheck : converted) {
+				if(dap.getCreationTime() == dapcheck.getCreationTime()) {					
+					double hcount = (double)dap.getCurrentClicks();					
+					hcount = hcount + meanArticles*threshold[0]*((double)1/(double)10);			//adjust temporal ranking							
+					hsum += hcount;
+				}
+			}
+		}
+		
+		for(DynamicArticleProperties dap : pmpa) {
+			for(DynamicArticleProperties dapcheck : converted) {
+				if(dap.getCreationTime() == dapcheck.getCreationTime()) {
+					double pcount = dap.getPcurrentClicks(); //previous
+					pcount = pcount + meanArticles*threshold[0]*(dapcheck.getPcurrentClicks()/ptotal); //probability distribution
+					psum += pcount;
+				}
+			}
+		}
+		return ((double)1/(double)10)*(Math.log(hsum/psum));
 	}
 	
 	public double printSum(List<DynamicArticleProperties> articles) {
@@ -389,5 +547,18 @@ public class BasicUtilities {
 			
 			e.printStackTrace();
 		}
+	}
+	
+	public int getListIndex(ArrayList<String> categories, String category) {
+		int index = 0;
+		for(String s : categories) {
+			if(!s.equalsIgnoreCase(category)) {
+				index++;
+			}
+			if(s.equalsIgnoreCase(category)) {
+				break;
+			}
+		}
+		return index;
 	}
 }

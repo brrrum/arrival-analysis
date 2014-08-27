@@ -9,12 +9,13 @@ import java.util.Random;
 
 import org.apache.commons.math3.exception.NotStrictlyPositiveException;
 
+import extension.copy.CProjectVariables;
 import arrivalUtilities.BasicUtilities;
 import umontreal.iro.lecuyer.probdist.InverseGaussianDist;
 
-public class UpdateReader {
+public class UpdateReader implements CProjectVariables {
 	
-	private static InverseGaussianDist inv = new InverseGaussianDist(2.16, 3); // mu = (3,8) and lambda = (2,6.2)
+	private static InverseGaussianDist inv = new InverseGaussianDist(meanArticles, 3); // mu = (3,8) and lambda = (2,6.2)
 	private int seed;
 	Random rand;
 	private BasicUtilities bsu = new BasicUtilities();
@@ -32,27 +33,26 @@ public class UpdateReader {
 			ArrayList<DynamicArticleProperties> pmpa) {
 		//ltempcat, all list of articles fda, front page list, mpa, most popular 
 		rand = new Random(seed);		
-		narticles = (int) Math.floor(inv.inverseF(rand.nextDouble())+1);
+		narticles = 1+ (int) Math.floor(inv.inverseF(rand.nextDouble())+1);
 		totalCount += narticles;
-		if( narticles > 15) {
-			narticles = 15;
+		if( narticles > 10) {
+			narticles = 10;
 		}
 		// first article from front page or most popular list.
 		// generate probability.		
 		for (int i = 0; i < narticles; i++) {
-			double sp = rand.nextDouble(); 			
+			double sp = rand.nextDouble();
+			seed = rand.nextInt();
 			if(i == 0){
 				if(sp <= fth[0]){ 					 
 					DynamicArticleProperties dp = updateCount(mpa, seed, true, 10, false, allArticles, pmpa); //random selection from most popular	
 					updateInAll(dp, allArticles);
-				} else if((sp > fth[0]) & (sp <= fth[0] + fth[1])) {
-					int seed1 = rand.nextInt();
-					DynamicArticleProperties dp = updateCount(fda, seed1, false, 20, false, allArticles, pmpa);
+				} else if((sp > fth[0]) & (sp <= fth[0] + fth[1])) {					
+					DynamicArticleProperties dp = updateCount(fda, seed, false, 20, false, allArticles, pmpa);
 					updateInAll(dp, allArticles);
 				}
-				else {
-					int seed1 = rand.nextInt();
-					updateCount(fda, seed1, false, 5, true, allArticles, pmpa);
+				else {					
+					updateCount(fda, seed, false, 5, true, allArticles, pmpa);
 					//System.out.println("need to be done");
 				}
 			} else {
@@ -60,8 +60,8 @@ public class UpdateReader {
 				// equal probability of selection other categories and then select in decreasing order.
 				sp = rand.nextDouble();
 				if( sp <= fth[0]) {
-					int seed1 = rand.nextInt();
-					DynamicArticleProperties dp = updateCount(mpa, seed1, true, 10, false, allArticles, pmpa);
+					
+					DynamicArticleProperties dp = updateCount(mpa, seed, true, 10, false, allArticles, pmpa);
 					updateInAll(dp, allArticles);
 				} else {
 					int catindex = rand.nextInt(BasicUtilities.getCategories().size());
@@ -83,13 +83,13 @@ public class UpdateReader {
 	
 	public void updateInAll(DynamicArticleProperties dp, ArrayList<LinkedList<DynamicArticleProperties>> allArticles) {
 		
-		int catindex = catnum(dp.getCategory()); 
-		
-		
+		int catindex = catnum(dp.getCategory()); 		
 		LinkedList<DynamicArticleProperties> updating = allArticles.get(catindex);
 		for(int j = 0; j < updating.size(); j++){
 			if(dp.getID().equalsIgnoreCase(updating.get(j).getID())){
 				updating.get(j).setCurrentClicks(dp.getCurrentClicks()); 
+				updating.get(j).setPcurrentClicks(dp.getPcurrentClicks()); // new line of code for probabilistic update, this may be the reason for anomaly observed earlier
+				//make sure it produces correct output.
 			}
 		}// Now for probabilistic
 		
@@ -120,42 +120,37 @@ public class UpdateReader {
 	public DynamicArticleProperties updateCount(List<DynamicArticleProperties> dap, int seed, boolean mp, int displayed, 
 			boolean categorized, ArrayList<LinkedList<DynamicArticleProperties>> allArticles, ArrayList<DynamicArticleProperties> pmpa) {
 		
+		DynamicArticleProperties dp = null;
+		Random random = new Random(seed);
 		if(mp) {
-			Random random = new Random(seed);
 			int index = random.nextInt(displayed);
-			DynamicArticleProperties dp = dap.get(index);
+			dp = dap.get(index);
 			pdp = pmpa.get(index);
 			
-			int count = dp.getCurrentClicks() + 1;
 			double pCount = pdp.getPcurrentClicks() + 1; // for probabilistic
-			dp.setCurrentClicks(count);
 			pdp.setPcurrentClicks(pCount); 
-			//System.out.println("previous : " + temp + "current : " + dp.getCurrentClicks());	
-			// update counts in allArticles
-			return dp;
-		} else {
-			if(categorized){
-				Random random = new Random(seed);
-				int catindex = random.nextInt(BasicUtilities.getCategories().size());
-				LinkedList<DynamicArticleProperties> scat = allArticles.get(catindex);
-				int index = bsu.readPattern(displayed, seed);
-				DynamicArticleProperties dp = scat.get(index);
-				int count = dp.getCurrentClicks() + 1;
-				double pCount = dp.getPcurrentClicks() + 1;
-				dp.setCurrentClicks(count);
-				dp.setPcurrentClicks(pCount); 
-				//System.out.println("previous : " + temp + "current : " + dp.getCurrentClicks());
-				return dp;				
-			}
-			int index = bsu.readPattern(displayed, seed); // check if 20 is correct
-			DynamicArticleProperties dp = dap.get(index);
-			int count = dp.getCurrentClicks() + 1;
+		} else if(categorized) 
+		{
+			pdp = null;
+			int catindex = random.nextInt(BasicUtilities.getCategories().size());
+			LinkedList<DynamicArticleProperties> scat = allArticles.get(catindex);
+			int index = bsu.readPattern(displayed, seed);
+			dp = scat.get(index);
+			// update probabilistic count
 			double pCount = dp.getPcurrentClicks() + 1;
-			dp.setCurrentClicks(count);
 			dp.setPcurrentClicks(pCount); 
-			//System.out.println("previous : " + temp + "current : " + dp.getCurrentClicks());
-			return dp;
-		}		
+		} else {
+			pdp = null;
+			int index = bsu.readPattern(displayed, seed); 
+			dp = dap.get(index);
+			
+			double pCount = dp.getPcurrentClicks() + 1;
+			dp.setPcurrentClicks(pCount); 
+		}
+				
+		int count = dp.getCurrentClicks() + 1;	
+		dp.setCurrentClicks(count);		
+		return dp;				
 		
 	}
 	
