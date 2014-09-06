@@ -42,6 +42,7 @@ public class ArrivalProcess implements CProjectVariables{
 	private String id10, id11;	
 	private static int INITIAL_COUNTS = 1000;	
 	private static double POWER_EXPONENT = 1.4;
+	private static boolean randSelect = true;
 	private double[] threshold;
 	private ArrayList<LinkedList<DynamicArticleProperties>> allArticles= new ArrayList<LinkedList<DynamicArticleProperties>>();
 	ArrayList<ArrayList<Double>> datapoints = new ArrayList<ArrayList<Double>>();
@@ -115,7 +116,7 @@ public class ArrivalProcess implements CProjectVariables{
 	}
 	
 	public void seedArticles(List<DynamicArticleProperties> articleList, List<DynamicArticleProperties> initialTimeSort,
-			List<DynamicArticleProperties> countSort) {		
+			List<DynamicArticleProperties> countSort, int ids) {		
 		List<String> categories = BasicUtilities.getCategories();
 		
 		// total seed articles 8*50 = 400, among them 20+40+10 are displayed on frontPage; additional 200 articles arrive
@@ -198,12 +199,15 @@ public class ArrivalProcess implements CProjectVariables{
 		//bsu.printResult(allArticles);	UNCOMMENT TO GET UPDATE		
 	}	
    
-	public void updateArticles(List<DynamicArticleProperties> countSort, double exp) {
+	public void updateArticles(List<DynamicArticleProperties> countSort, double exp, int ids) {
 		List<Integer> arrivals = arrivalofArticles();
 		//avoiding expensive writing
 		BufferedWriter bw = null, bwh = null; 
 		//BufferedWriter bw = createBufferedWriter(exp);
 		//BufferedWriter bwh = createHBufferedWriter();
+		for(int i = 0; i < countSort.size(); i++) {
+			countSort.get(i).setExponent(exp); // this is added on august 29.
+		}
 		for(int it = 0; it < sampleSize; it++) {			
 			int val = arrivals.get(it);
 			
@@ -221,6 +225,7 @@ public class ArrivalProcess implements CProjectVariables{
 				dnp.setCategory(BasicUtilities.getCategories().get(catindex));
 				dnp.setFrontcat(true);
 				dnp.setBreakingNews(true); //breaking news is basically most recent news articles.
+				dnp.setExponent(exp); /// modified recently.......
 				System.out.println("new article arrived with count : " + dnp.getClicks()); 
 				List<DynamicArticleProperties> tempcat = allArticles.get(catindex);
 				ltempcat = new LinkedList<DynamicArticleProperties>(tempcat);	
@@ -248,12 +253,13 @@ public class ArrivalProcess implements CProjectVariables{
 				countSort.add(dnp);				
 			}
 			
-			bsu.sortCont(countSort); // IMPLEMENT PROBABILISTIC
+			bsu.sortCont(countSort); // IMPLEMENT PROBABILISTIC			
 			mpa = bsu.mostPopular(countSort, bsu.convertList(allArticles), false); // we need only 10 articles to be displayed			
 			//System.out.println("most popular : " + bsu.writeValue(mpa, true)); 
 			int tempseed = refreshRNG();
 			//pmpa = new MethodT().pMostPopular(countSort, bsu.convertList(allArticles), exp);
-			pmpa = bsu.pMostPopular(tempseed, countSort, bsu.convertList(allArticles), exp);
+			pmpa = bsu.pMostPopular(tempseed, countSort, bsu.convertList(allArticles), exp, ids);
+			// get the adjusted count of articles......
 			//System.out.println("prob popular : " + bsu.writeValue(pmpa, true)); 
 			//List<DynamicArticleProperties> copy = bsu.convertList(allArticles); //bsu.sortCont(copy);	 
 			upr = new UpdateReader(refreshRNG());			
@@ -262,8 +268,10 @@ public class ArrivalProcess implements CProjectVariables{
 			//System.out.println(" psum : " + bsu.printPSum(bsu.convertList(allArticles)) + "sum : " + bsu.printSum(bsu.convertList(allArticles)));
 			sample1 = bsu.getHashMaps(bsu.convertList(allArticles));
 			double accLoss = bsu.accuracyLoss(mpa, pmpa);
-			double normalizedValue = bsu.normalizedAccuracyLoss(mpa, pmpa, allArticles, meanArticles, threshold, fda);//here mpa and pmpa are old counts
-			double expectedAccLoss = bsu.expectedAccuracyLoss(mpa, pmpa, allArticles, meanArticles, threshold); //allArticles has been updated			
+			double hsum = bsu.accuracyLossCounts(mpa, pmpa, allArticles, meanArticles, threshold, fda, true, randSelect);//here mpa and pmpa are old counts
+			double psum = bsu.accuracyLossCounts(mpa, pmpa, allArticles, meanArticles, threshold, fda, false, randSelect);
+			double expectedAccLoss = ((double)1/(double)10)*(Math.log(hsum/psum));
+			//double expectedAccLoss = bsu.expectedAccuracyLoss(mpa, pmpa, allArticles, meanArticles, threshold); //allArticles has been updated			
 			// store normalizedValue in a Array List.
 			/*************Accuracy Loss Adjustment*****************/
 			double distortion = distortionMeasure(sample1, initialIds, false, bw);
@@ -283,10 +291,12 @@ public class ArrivalProcess implements CProjectVariables{
 			rpclicks  = bsu.getRClicks(impa, bsu.convertList(allArticles));
 			pm2Plot(newClicks, rpclicks, it);
 			
-			if(exp == 1) { // we need to execute it once for M2, extreme case
-				normAccLoss.add(normalizedValue);
+			if(exp == 0) { // we need to execute it once for M2, extreme case
+				double normalizedExpectedLoss = ((double)1/(double)10)*(Math.log(hsum/psum));
+				normAccLoss.add(normalizedExpectedLoss); 
 				hnclicks = bsu.getHRClicks(impa, bsu.convertList(allArticles));
 				hm2Plot(newClicks, hnclicks, it);
+				randSelect = false;
 			}
 			
 		}

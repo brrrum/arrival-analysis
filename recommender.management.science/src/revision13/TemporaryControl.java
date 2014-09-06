@@ -16,8 +16,9 @@ import java.util.concurrent.Future;
 public class TemporaryControl {
 	
 	private static final double numberOfReaders = 10; //lambda = .005	
-	private static double[] exponent = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };	
+	private static double[] exponent = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };	
 	private static DecimalFormat format = new DecimalFormat("0.00000000");
+	private static int idsForManipulation = 20;
 	
 	private static ArrayList<double[]> rsensitivity() {	
 		ArrayList<double[]> probs = new ArrayList<double[]>();
@@ -69,8 +70,8 @@ public class TemporaryControl {
 				//ArrivalProcess arrivals = new ArrivalProcess((int) numberOfReaders, lambda, prob);
 				
 				ArrivalProcess arrivals = new ArrivalProcess(gr, (int) numberOfReaders, lambda, prob);	
-				arrivals.seedArticles(articleList,  initialTimeSort, countSort);
-				arrivals.updateArticles(countSort, exponent[i-1]); 
+				arrivals.seedArticles(articleList,  initialTimeSort, countSort, idsForManipulation);
+				arrivals.updateArticles(countSort, exponent[i-1], idsForManipulation); 
 				
 				if( i == 1) {
 					ArrayList<ArrayList<Double>> hard = arrivals.getHSimulationPoints(); /// arraylist with iteration and m1 value.
@@ -174,8 +175,8 @@ public class TemporaryControl {
 			List<DynamicArticleProperties> countSort = new ArrayList<DynamicArticleProperties>();
 			
 			ArrivalProcess arrivals = new ArrivalProcess((int) numberOfReaders, lambda, null);		
-			arrivals.seedArticles(articleList,  initialTimeSort, countSort);
-			arrivals.updateArticles(countSort, exponent[i-1]); 
+			arrivals.seedArticles(articleList,  initialTimeSort, countSort, idsForManipulation);
+			arrivals.updateArticles(countSort, exponent[i-1], idsForManipulation); 
 			
 			if( i == 1) {
 				ArrayList<ArrayList<Double>> hard = arrivals.getHSimulationPoints();

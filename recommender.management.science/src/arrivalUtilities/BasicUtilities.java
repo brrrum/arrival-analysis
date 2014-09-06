@@ -82,16 +82,33 @@ public class BasicUtilities {
 	}
 	
 	public ArrayList<DynamicArticleProperties> pMostPopular(int seed, List<DynamicArticleProperties> countSort, List<DynamicArticleProperties> convertList, 
-			double exp) {
+			double exp, int ids) {
 		
 		ArrayList<DynamicArticleProperties> prob_articles = new ArrayList<DynamicArticleProperties>();
-		int size = countSort.size();		
+		int size = countSort.size();
 		int n = 10; // select 10 articles probabilistically; 
+		if(exp == 0) {
+			Random random = new Random(seed);
+			int newSeed = random.nextInt();
+			ArrayList<DynamicArticleProperties> copyCountSort = new ArrayList<DynamicArticleProperties>(size); 
+			for(int i = 0; i < size; i++) {
+				copyCountSort.add(countSort.get(i));
+			}
+			Collections.shuffle(copyCountSort, new Random(newSeed)); 
+			for(int i = 0; i < n; i++) {
+				prob_articles.add(copyCountSort.get(i));
+			}
+			return prob_articles;
+		}		
+		
 		ArrayList<ArrayList<Double>> amodified = new ArrayList<ArrayList<Double>>(size); 
 		StringBuilder sb = new StringBuilder();
 		for(int i = 0; i < size; i++) {
+			
 			ArrayList<Double> value = new ArrayList<Double>(2); // for exponent and value, exponent for influence limiter
-			value.add(exp); value.add(Math.pow(countSort.get(i).getPcurrentClicks(), exp));
+			double modifiedExp; // reading_prob*(total_prob_clicks)/10*article.pCurrentCliks; //IMPLEMENT INFLUENCE LIMITER HERE
+			//value.add(modifiedExp); value.add(Math.pow(countSort.get(i).getPcurrentClicks(), modifiedExp)); 
+			value.add(exp); value.add(Math.pow(countSort.get(i).getPcurrentClicks(), exp)); 
 			amodified.add(value);
 			sb.append(value.get(1) + " "); 
 		}		
@@ -370,91 +387,78 @@ public class BasicUtilities {
 		return ((double)1/(double)n)*(Math.log(topN/probN));		
 	}
 	
-	public double normalizedAccuracyLoss(ArrayList<DynamicArticleProperties> mpa,
-			ArrayList<DynamicArticleProperties> pmpa, ArrayList<LinkedList<DynamicArticleProperties>> allArticles, 
-			double meanArticles, double[] threshold, LinkedList<DynamicArticleProperties> fda) {
-		//the expectation of total count for 10 articles, in previous time step
-		//if front or other ones need to be addressed
-		List<DynamicArticleProperties>  converted = convertList(allArticles);		
-		// to find the updated count articles in mpa and pmpa by searching in allArticles		
-		//FRONT PAGE BREAKING NEWS; AGGREGATE MAY NEED TO BE BROKEN IN INDIVIDUAL
-		double hsum = 0;
-		for(DynamicArticleProperties dap : mpa) {
+	public double accuracyLossCounts(ArrayList<DynamicArticleProperties> mpa, ArrayList<DynamicArticleProperties> pmpa, 
+			ArrayList<LinkedList<DynamicArticleProperties>> allArticles, double meanArticles, double[] threshold, 
+			LinkedList<DynamicArticleProperties> fda, boolean mporpmp, boolean randSelect) {
+		ArrayList<DynamicArticleProperties> newmp;
+		List<DynamicArticleProperties>  converted = convertList(allArticles);
+		//to find the updated count articles in mpa and pmpa by searching in allArticles	
+		double ptotal = 0;
+		for (DynamicArticleProperties dp : converted) {			
+			ptotal += dp.getPcurrentClicks();
+		}
+		if(mporpmp) {
+			newmp = mpa;
+		}
+		else {
+			newmp = pmpa;
+		}
+		//the expectation of total count for 10 articles, in previous time step		
+		double hpsum = 0;
+		double totalArticles = converted.size();
+		for(DynamicArticleProperties dap : newmp) {
 			for(DynamicArticleProperties dapcheck : converted) {
-				// BREAK IT IN FIRST PAGE AND OTHER PAGES; READING PROB = 1+ INVERSE GAUSS. READJUST IT.
-				if(dap.getCreationTime() == dapcheck.getCreationTime()) {					
-					double hcount = (double)dap.getCurrentClicks();					
-					hcount += (1+meanArticles)*threshold[0]*((double)1/(double)10);			//adjust temporal ranking					
-
+				//BREAK IT IN FIRST PAGE AND OTHER PAGES; READING PROB = 1+ INVERSE GAUSS. READJUST IT.
+				if(dap.getCreationTime() == dapcheck.getCreationTime()) {
+					double hpcount;
+					if(mporpmp) {
+						hpcount = (double)dap.getCurrentClicks();
+						hpcount += (1+meanArticles)*threshold[0]*((double)1/(double)10);
+					} else {
+						hpcount = (double)dap.getPcurrentClicks();
+						if(randSelect) {
+							hpcount += (1+meanArticles)*threshold[0]*((double)1/totalArticles); //random selection
+						} else {
+							hpcount = hpcount + (1+meanArticles)*threshold[0]*(dapcheck.getPcurrentClicks()/ptotal);
+						}						
+					}					
+					
 					double readProb = 0;
 					String category = dap.getCategory();
 					int index = getListIndex(getCategories(), category);
-					LinkedList<DynamicArticleProperties> categoryList = allArticles.get(index);					
+					LinkedList<DynamicArticleProperties> categoryList = allArticles.get(index);	
 					
 					int rank = 0;
 					if(dap.getBreakingNews()) {
 						rank = findPresence(fda, dap, 20);						
 						if(rank != 0) {
 							readProb = readPatternProb(rank, fda.size()); 
-							hcount += 1*threshold[1]*readProb; //CHECK THIS, make sure probabilities are correct
+							hpcount += 1*threshold[1]*readProb; //CHECK THIS, make sure probabilities are correct
 						}						
-					}					
-					rank = findPresence(categoryList, dap, 10);
-					if((rank != 0) && (rank <=5)) {
-						readProb = readPatternProb(rank, 5);
-						hcount += 1*threshold[2]*(1/8)*readProb; 
-					}
-					// Now for other pages					
-					if((rank != 0)&& (rank <= 10)) {
-						readProb = readPatternProb(rank, 10);
-						hcount += (1/8)*meanArticles*(threshold[1]+threshold[2])*readProb;
-					}
-					hsum += hcount;
-				}				
-			}			
-		}			
-		
-		double psum = 0;
-		double totalArticles = converted.size();
-		for(DynamicArticleProperties dap : pmpa) { //this is different
-			for(DynamicArticleProperties dapcheck : converted) {
-				if(dap.getCreationTime() == dapcheck.getCreationTime()) {
-					double pcount = dap.getPcurrentClicks(); //this is different
-					pcount += (1+meanArticles)*threshold[0]*((double)1/totalArticles);//make sure, this is different
-					
-					double readProb = 0;
-					String category = dap.getCategory();
-					int index = getListIndex(getCategories(), category);
-					LinkedList<DynamicArticleProperties> categoryList = allArticles.get(index);				
-					
-					int rank = 0;
-					if(dap.getBreakingNews()) {
-						rank = findPresence(fda, dap, 20);
-						if(rank != 0) {
-							readProb = readPatternProb(rank, fda.size());
-							pcount += 1*threshold[1]*readProb;
-						}
 					}
 					
 					rank = findPresence(categoryList, dap, 10);
 					if((rank != 0) && (rank <= 5)) {
-						readProb = readPattern(rank, 5);
-						pcount += 1*threshold[2]*(1/8)*readProb;
-					}
-					// Now for other pages
+						readProb = readPatternProb(rank, 5);
+						hpcount += 1*threshold[2]*(1/8)*readProb;
+					}					
+					// Now for other pages					
 					if((rank != 0)&& (rank <= 10)) {
 						readProb = readPatternProb(rank, 10);
-						pcount += (1/8)*meanArticles*(threshold[1]+threshold[2])*readProb;
+						hpcount += (1/8)*meanArticles*(threshold[1]+threshold[2])*readProb;
 					}
-					psum += pcount;
+					hpsum += hpcount;
 				}
 			}
-		}		
-		
-		double normalizationValue = ((double)1/(double)10)*(Math.log(hsum/psum));
-		//CREATE A METHOD TO REMOVE REPETITION
+		}
+		return hpsum;
+	}
+	
+	public double normalizedAccuracyLoss(ArrayList<DynamicArticleProperties> mpa,
+			ArrayList<DynamicArticleProperties> pmpa, ArrayList<LinkedList<DynamicArticleProperties>> allArticles, 
+			double meanArticles, double[] threshold, LinkedList<DynamicArticleProperties> fda) {		
 		// now calculate share, it is useful for probabilistic selection, gamma = 1		
-		return normalizationValue;
+		return 0;
 	}
 	
 	private int findPresence(
@@ -474,39 +478,6 @@ public class BasicUtilities {
 		else 
 			return 0;
 	}	
-	
-	public double expectedAccuracyLoss(ArrayList<DynamicArticleProperties> mpa, ArrayList<DynamicArticleProperties> pmpa, 
-			ArrayList<LinkedList<DynamicArticleProperties>> allArticles, double meanArticles, double[] threshold) {		
-		
-		List<DynamicArticleProperties>  converted = convertList(allArticles);
-		double htotal = 0, ptotal = 0;
-		for (DynamicArticleProperties dp : converted) {
-			htotal += dp.getCurrentClicks();
-			ptotal += dp.getPcurrentClicks();
-		}		
-		
-		double psum = 0, hsum = 0;
-		for(DynamicArticleProperties dap : mpa) {
-			for(DynamicArticleProperties dapcheck : converted) {
-				if(dap.getCreationTime() == dapcheck.getCreationTime()) {					
-					double hcount = (double)dap.getCurrentClicks();					
-					hcount = hcount + meanArticles*threshold[0]*((double)1/(double)10);			//adjust temporal ranking							
-					hsum += hcount;
-				}
-			}
-		}
-		
-		for(DynamicArticleProperties dap : pmpa) {
-			for(DynamicArticleProperties dapcheck : converted) {
-				if(dap.getCreationTime() == dapcheck.getCreationTime()) {
-					double pcount = dap.getPcurrentClicks(); //previous
-					pcount = pcount + meanArticles*threshold[0]*(dapcheck.getPcurrentClicks()/ptotal); //probability distribution
-					psum += pcount;
-				}
-			}
-		}
-		return ((double)1/(double)10)*(Math.log(hsum/psum));
-	}
 	
 	public double printSum(List<DynamicArticleProperties> articles) {
 		double sum = 0;

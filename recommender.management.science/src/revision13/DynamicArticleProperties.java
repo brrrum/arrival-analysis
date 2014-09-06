@@ -12,6 +12,7 @@ public class DynamicArticleProperties {
 	private boolean breakingNews = false;
 	private int currentClicks;
 	private double pCurrentClicks;
+	private double exponent;
 	
 	public DynamicArticleProperties(String uid, int initialClicks, long timeStamp){
 		this.uid = uid;
@@ -88,6 +89,14 @@ public class DynamicArticleProperties {
 	
 	public void setInitialClicks(int initial) {
 		this.initialClicks = initial;
+	}
+	
+	public void setExponent(double exponent) {
+		this.exponent = exponent;
+	}
+	
+	public double getExponent() {
+		return exponent;
 	}
 
 }
