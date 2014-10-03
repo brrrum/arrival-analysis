@@ -15,7 +15,7 @@ import java.util.concurrent.Future;
 
 public class TemporaryControl {
 	
-	private static final double numberOfReaders = 10; //lambda = .005	
+	private static final double numberOfReaders = 100000; //lambda = .005	
 	private static double[] exponent = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };	
 	private static DecimalFormat format = new DecimalFormat("0.00000000");
 	private static int idsForManipulation = 20;
@@ -58,7 +58,7 @@ public class TemporaryControl {
 			ArrayList<Double> hvalues = new ArrayList<Double>();
 			double lambda = 0.0003;			
 			
-			for(int i = 1; i <= 1; i++) {
+			for(int i = 1; i <= 11; i++) {
 				Generator gr = new Generator();
 				gr.setSeed(764545);	gr.setSeed(gr.refreshRNG());
 				
@@ -87,15 +87,15 @@ public class TemporaryControl {
 				
 				double loss = arrivals.getAverageAccuracyLoss(arrivals.getExpAccLosses());
 				double nloss = arrivals.getAverageAccuracyLoss(arrivals.getNormAccLoss());
-				System.out.println("loss : " + format.format(loss) + " nloss : " + format.format(nloss)); 
-				nlosses.add((double)i); nlosses.add(loss/nloss);
-				losses.add((double) i); losses.add(loss);
+				System.out.println("loss : " + format.format(loss) + " nloss for test : " + format.format(nloss)); 
+				nlosses.add((double)i-1); nlosses.add(loss/nloss);
+				losses.add((double) i-1); losses.add(loss);
 				// we are printing both previous loss metric and normalized loss metric, git test
 				acclosses.add(losses); ncclosses.add(nlosses);
 				
 				double distortion = arrivals.getAverageJSD();
 				jsds.add(distortion);
-				System.out.println("-----------new exponent " + i + "----------"); 
+				System.out.println("-----------new exponent " + (i-1) + "----------"); 
 			}
 			writeFile(repdatapoints, "M1" + "-" + it + ".csv");
 			writeFile(m2datapoints, "M2" + "-" + it + ".csv");
@@ -144,7 +144,7 @@ public class TemporaryControl {
 		ExecutorService exs = Executors.newCachedThreadPool();
 		ArrayList<Future<?>> futures = new ArrayList<Future<?>>();
 		
-		for(int i = rsensitivity().size()-1; i >= 7; i--) {			
+		for(int i = rsensitivity().size()-1; i >= 6; i--) {			
 			TemporaryControl.RunWithThread runth = tmp.new RunWithThread(rsensitivity().get(i), i+1);
 			futures.add(exs.submit(runth)); 
 			
@@ -201,6 +201,7 @@ public class TemporaryControl {
 	
 	private static void writesingColumn(ArrayList<Double> data, int it) {
 		try {
+			
 			BufferedWriter bw  = new BufferedWriter(new FileWriter("hardDistortion"+"-"+it+".csv")); 
 			for(int i = 0; i < data.size(); i++) {
 				bw.write(Double.toString(data.get(i)));	

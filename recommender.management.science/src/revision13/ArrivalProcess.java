@@ -270,6 +270,7 @@ public class ArrivalProcess implements CProjectVariables{
 			double accLoss = bsu.accuracyLoss(mpa, pmpa);
 			double hsum = bsu.accuracyLossCounts(mpa, pmpa, allArticles, meanArticles, threshold, fda, true, randSelect);//here mpa and pmpa are old counts
 			double psum = bsu.accuracyLossCounts(mpa, pmpa, allArticles, meanArticles, threshold, fda, false, randSelect);
+			//FIX IT
 			double expectedAccLoss = ((double)1/(double)10)*(Math.log(hsum/psum));
 			//double expectedAccLoss = bsu.expectedAccuracyLoss(mpa, pmpa, allArticles, meanArticles, threshold); //allArticles has been updated			
 			// store normalizedValue in a Array List.
